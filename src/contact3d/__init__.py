@@ -1,5 +1,18 @@
 """Three-dimensional finite-sliding mortar contact research package."""
 
+from .clipping import (
+    ClippedPolygonLinearization,
+    ClippingOperation,
+    ClippingStage,
+    ClippingTopology,
+    ClippingTopologyError,
+    FacetIntersectionLinearization,
+    clip_convex_polygon_linearized,
+    linearize_clipping_topology,
+    linearize_facet_intersection,
+    replay_clipping_topology,
+    trace_clipping_topology,
+)
 from .contact import (
     ContactEvaluation,
     ContactPair,
@@ -41,9 +54,15 @@ from .surface import (
 )
 
 __all__ = [
+    "ClippedPolygonLinearization",
+    "ClippingOperation",
+    "ClippingStage",
+    "ClippingTopology",
+    "ClippingTopologyError",
     "ContactEvaluation",
     "ContactPair",
     "ContactSurface",
+    "FacetIntersectionLinearization",
     "FacetOverlap",
     "GlobalMortarWeights",
     "LocalMortarWeights",
@@ -57,6 +76,7 @@ __all__ = [
     "averaged_nodal_normals",
     "build_facet_overlap",
     "clip_convex_polygon",
+    "clip_convex_polygon_linearized",
     "discover_facet_pairs",
     "evaluate_contact",
     "facet_projection_plane",
@@ -65,12 +85,16 @@ __all__ = [
     "infer_facet_kind",
     "integrate_facet_pair",
     "inverse_map_2d",
+    "linearize_clipping_topology",
+    "linearize_facet_intersection",
     "moving_mortar_contact_tangent",
     "numerical_contact_tangent",
     "numerical_mortar_weight_jacobian",
     "polygon_signed_area",
     "project_to_plane",
     "project_to_plane_jacobian",
+    "replay_clipping_topology",
     "shape_values",
+    "trace_clipping_topology",
     "triangulate_convex_polygon",
 ]
