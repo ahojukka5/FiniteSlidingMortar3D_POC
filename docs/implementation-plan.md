@@ -25,25 +25,25 @@ The penalty residual is intentionally a verification kernel, not yet the paper's
 
 ## Phase 3 — consistent geometric linearization — in progress
 
-Completed first slice:
+Completed:
 
 - analytical Appendix A nominal-normal Jacobian;
-- fixed-`D/M` weighted-gap derivative;
-- pressure and traction derivatives with frozen unilateral activity;
-- slave and master force-distribution derivatives;
-- column-wise verification against a frozen-weight centered-difference oracle;
-- exact common-translation nullspace regression.
+- analytical fixed-`D/M` force-law tangent;
+- topology-frozen numerical Jacobians of the moving `D` and `M` operators;
+- complete smooth tangent decomposition including row-area and force-distribution derivatives;
+- derivative-level momentum consistency and rigid-translation tests;
+- comparison against the independent full residual oracle.
 
-Remaining derivatives from Section 4 and Appendices A–B:
+Remaining analytical derivatives from Section 4 and Appendices A–B:
 
-- projection plane origin and normal;
-- projected facet vertices;
+- projection plane origin, tangents, and normal;
+- projected slave and master facet vertices;
 - clipping intersection vertices, including edge-on-edge degeneracy;
 - pallet centers and areas;
 - both inverse maps and shape functions;
-- moving `D` and `M` operators and the resulting complete contact tangent.
+- analytical `D` and `M` operator Jacobians replacing the numerical geometry oracle.
 
-Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The numerical tangent introduced in Phase 2 remains the verification oracle for every analytical contribution.
+Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The moving-operator Jacobian now defines the tensor contract that every analytical geometry layer must satisfy.
 
 ## Phase 4 — constraint enforcement
 
