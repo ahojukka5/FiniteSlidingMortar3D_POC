@@ -33,17 +33,18 @@ Completed:
 - complete smooth tangent decomposition including row-area and force-distribution derivatives;
 - analytical projection-plane origin, tangent, and normal Jacobians;
 - analytical projected slave and master vertex Jacobians;
+- topology-frozen clipping traces and analytical intersection-vertex Jacobians;
 - derivative-level momentum consistency and rigid-translation tests;
 - comparison against independent centered-difference oracles.
 
 Remaining analytical derivatives from Section 4 and Appendices A–B:
 
-- clipping intersection vertices, including edge-on-edge degeneracy;
+- explicit edge-on-edge and on-vertex generalized derivatives;
 - pallet centers and signed areas;
 - both inverse maps and quadrature shape functions;
 - analytical `D` and `M` operator Jacobians replacing the numerical geometry oracle.
 
-Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The moving-operator Jacobian defines the tensor contract that every analytical geometry layer must satisfy.
+Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The moving-operator Jacobian defines the tensor contract that every analytical geometry layer must satisfy. Clipping states inside a configurable event band are rejected as outer topology events instead of receiving an arbitrary smooth derivative.
 
 ## Phase 4 — constraint enforcement
 
