@@ -24,6 +24,42 @@ class ProjectionPlane:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectionPlaneJacobian:
+    """Coordinate derivatives of a projection-plane frame.
+
+    Every tensor has axes ``(output_component, input_node, input_component)``.
+    """
+
+    origin: FloatArray
+    tangent_u: FloatArray
+    tangent_v: FloatArray
+    normal: FloatArray
+
+    @property
+    def node_count(self) -> int:
+        return int(self.origin.shape[1])
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectedPointsJacobian:
+    """Derivatives of projected coordinates with separated variable groups.
+
+    ``plane`` has axes ``(point, projected_component, plane_node, component)``.
+    ``points`` has axes ``(point, projected_component, point_node, component)``.
+    """
+
+    plane: FloatArray
+    points: FloatArray
+
+    def combined_shared_coordinates(self) -> FloatArray:
+        """Combine both terms when projected and plane-defining nodes coincide."""
+
+        if self.plane.shape != self.points.shape:
+            raise ValueError("plane and point Jacobians do not share the same nodes")
+        return self.plane + self.points
+
+
+@dataclass(frozen=True, slots=True)
 class MortarPallet:
     """One triangular integration pallet in projection-plane coordinates."""
 

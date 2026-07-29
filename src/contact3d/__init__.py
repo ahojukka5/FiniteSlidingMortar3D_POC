@@ -12,11 +12,20 @@ from .contact import (
 from .geometry import (
     clip_convex_polygon,
     facet_projection_plane,
+    facet_projection_plane_jacobian,
     polygon_signed_area,
     project_to_plane,
+    project_to_plane_jacobian,
     triangulate_convex_polygon,
 )
-from .model import FacetOverlap, LocalMortarWeights, MortarPallet, ProjectionPlane
+from .model import (
+    FacetOverlap,
+    LocalMortarWeights,
+    MortarPallet,
+    ProjectedPointsJacobian,
+    ProjectionPlane,
+    ProjectionPlaneJacobian,
+)
 from .moving import (
     MortarWeightJacobian,
     moving_mortar_contact_tangent,
@@ -40,7 +49,9 @@ __all__ = [
     "LocalMortarWeights",
     "MortarPallet",
     "MortarWeightJacobian",
+    "ProjectedPointsJacobian",
     "ProjectionPlane",
+    "ProjectionPlaneJacobian",
     "assemble_mortar_weights",
     "averaged_nodal_normal_jacobian",
     "averaged_nodal_normals",
@@ -49,6 +60,7 @@ __all__ = [
     "discover_facet_pairs",
     "evaluate_contact",
     "facet_projection_plane",
+    "facet_projection_plane_jacobian",
     "fixed_mortar_contact_tangent",
     "infer_facet_kind",
     "integrate_facet_pair",
@@ -58,6 +70,7 @@ __all__ = [
     "numerical_mortar_weight_jacobian",
     "polygon_signed_area",
     "project_to_plane",
+    "project_to_plane_jacobian",
     "shape_values",
     "triangulate_convex_polygon",
 ]
