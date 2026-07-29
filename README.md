@@ -2,19 +2,25 @@
 
 Research implementation of three-dimensional finite-sliding mortar contact methods.
 
-The first target is the frictionless large-deformation segment-to-segment formulation of Puso and Laursen (2004). The implementation begins with the geometric operation on which the method depends: project an overlapping facet pair to the non-mortar center plane, clip the polygons, triangulate the overlap, and integrate both sides at identical physical quadrature points.
+The first target is the frictionless large-deformation segment-to-segment formulation of Puso and Laursen (2004). The implementation follows the paper's geometric construction: project each proximate facet pair to the non-mortar center plane, clip the polygons, triangulate the overlap, and integrate both sides at identical physical quadrature points.
 
 ## Current capability
 
 - linear `TRI3` and bilinear `QUAD4` contact facets;
-- center-plane projection for curved/warped current configurations;
-- deterministic convex polygon clipping;
-- triangular mortar pallets;
+- center-plane projection for curved and warped current configurations;
+- deterministic convex polygon clipping and triangular mortar pallets;
 - 1-, 3-, and 7-point triangle quadrature;
-- local standard-mortar `D` and `M` matrices;
-- exact row-wise partition-of-unity check for linear momentum conservation.
+- local and global standard-mortar `D` and `M` matrices;
+- row-wise partition-of-unity diagnostics for linear momentum conservation;
+- current-configuration averaged nodal normals from Appendix A;
+- AABB broad-phase discovery independent of projected vertex ownership;
+- weighted mortar gaps and an area-normalized frictionless penalty residual;
+- force and moment balance diagnostics;
+- frozen-pair, frozen-active-set numerical tangent oracle.
 
-The package does **not** yet solve a contact boundary-value problem. Contact activation, pressure enforcement, bulk finite elements, consistent linearization, friction, and dual multipliers are tracked in [the implementation plan](docs/implementation-plan.md).
+The package does **not** yet solve a complete contact boundary-value problem. Bulk finite elements, the analytical geometric tangent, augmented-Lagrange enforcement, friction, and dual multipliers are tracked in [the implementation plan](docs/implementation-plan.md).
+
+The residual equations and the deliberate normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md).
 
 ## Development
 
