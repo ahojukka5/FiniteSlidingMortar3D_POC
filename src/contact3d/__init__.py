@@ -6,6 +6,7 @@ from .contact import (
     GlobalMortarWeights,
     assemble_mortar_weights,
     evaluate_contact,
+    fixed_mortar_contact_tangent,
     numerical_contact_tangent,
 )
 from .geometry import (
@@ -18,7 +19,12 @@ from .geometry import (
 from .model import FacetOverlap, LocalMortarWeights, MortarPallet, ProjectionPlane
 from .overlap import build_facet_overlap, integrate_facet_pair
 from .shapes import infer_facet_kind, inverse_map_2d, shape_values
-from .surface import ContactSurface, averaged_nodal_normals, discover_facet_pairs
+from .surface import (
+    ContactSurface,
+    averaged_nodal_normal_jacobian,
+    averaged_nodal_normals,
+    discover_facet_pairs,
+)
 
 __all__ = [
     "ContactEvaluation",
@@ -30,12 +36,14 @@ __all__ = [
     "MortarPallet",
     "ProjectionPlane",
     "assemble_mortar_weights",
+    "averaged_nodal_normal_jacobian",
     "averaged_nodal_normals",
     "build_facet_overlap",
     "clip_convex_polygon",
     "discover_facet_pairs",
     "evaluate_contact",
     "facet_projection_plane",
+    "fixed_mortar_contact_tangent",
     "infer_facet_kind",
     "integrate_facet_pair",
     "inverse_map_2d",

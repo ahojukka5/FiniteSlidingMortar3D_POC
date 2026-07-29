@@ -23,18 +23,27 @@
 
 The penalty residual is intentionally a verification kernel, not yet the paper's augmented-Lagrange solver. It retains the exact weighted gap and exposes the area normalization explicitly so later constraint laws can replace it without changing the overlap or force assembly.
 
-## Phase 3 — consistent geometric linearization
+## Phase 3 — consistent geometric linearization — in progress
 
-Implement the derivatives described in Section 4 and Appendices A–B:
+Completed first slice:
+
+- analytical Appendix A nominal-normal Jacobian;
+- fixed-`D/M` weighted-gap derivative;
+- pressure and traction derivatives with frozen unilateral activity;
+- slave and master force-distribution derivatives;
+- column-wise verification against a frozen-weight centered-difference oracle;
+- exact common-translation nullspace regression.
+
+Remaining derivatives from Section 4 and Appendices A–B:
 
 - projection plane origin and normal;
 - projected facet vertices;
 - clipping intersection vertices, including edge-on-edge degeneracy;
 - pallet centers and areas;
 - both inverse maps and shape functions;
-- `D`, `M`, weighted gap, nodal normal, pressure, and contact force.
+- moving `D` and `M` operators and the resulting complete contact tangent.
 
-Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The numerical tangent introduced in Phase 2 is the verification oracle for every analytical contribution.
+Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The numerical tangent introduced in Phase 2 remains the verification oracle for every analytical contribution.
 
 ## Phase 4 — constraint enforcement
 
