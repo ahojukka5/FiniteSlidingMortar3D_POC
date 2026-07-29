@@ -18,11 +18,12 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - weighted mortar gaps and an area-normalized frictionless penalty residual;
 - force and moment balance diagnostics;
 - frozen-pair and frozen-active-set numerical tangent oracle;
-- analytical fixed-`D/M` penalty-force tangent verified against that oracle.
+- analytical fixed-`D/M` penalty-force tangent;
+- topology-frozen moving-`D/M` Jacobian and complete smooth tangent oracle.
 
-The package does **not** yet solve a complete contact boundary-value problem. The moving-overlap derivatives, bulk finite elements, augmented-Lagrange enforcement, friction, and dual multipliers are tracked in [the implementation plan](docs/implementation-plan.md).
+The package does **not** yet solve a complete contact boundary-value problem. The fully analytical moving-overlap derivatives, bulk finite elements, augmented-Lagrange enforcement, friction, and dual multipliers are tracked in [the implementation plan](docs/implementation-plan.md).
 
-The residual equations and the deliberate normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The analytical tangent boundary is documented in [the linearization note](docs/consistent-linearization.md).
+The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md) and [the moving-overlap note](docs/moving-overlap-tangent.md).
 
 ## Development
 
