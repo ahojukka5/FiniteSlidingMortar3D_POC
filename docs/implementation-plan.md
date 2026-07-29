@@ -1,6 +1,6 @@
 # Implementation plan
 
-## Phase 1 — geometric overlap kernel
+## Phase 1 — geometric overlap kernel — complete
 
 - center tangent plane for `TRI3` and `QUAD4` non-mortar facets;
 - projection of both facets into a shared two-dimensional frame;
@@ -10,16 +10,18 @@
 - common quadrature and local `D`/`M` assembly;
 - row-wise linear-momentum consistency tests.
 
-This phase is independent of contact activation, pressure enforcement, bulk elements, and Newton iteration. It provides a small numerical oracle for all later residual and tangent work.
+## Phase 2 — frictionless contact residual — complete
 
-## Phase 2 — frictionless contact residual
-
-- surface mesh and facet-pair broad phase;
+- validated surface topology and current coordinates;
+- AABB facet-pair broad phase;
 - current-configuration nodal normals following Appendix A;
-- weighted gap vectors and scalar normal gaps;
-- penalty residual with transactional active-set state;
+- global `D`/`M` assembly from independently integrated facet pairs;
+- weighted gap vectors and row-area-normalized scalar normal gaps;
+- frictionless penalty activation with an explicitly freezable active set;
 - force and moment balance diagnostics;
-- numerical directional derivative oracle.
+- frozen-pair numerical tangent oracle.
+
+The penalty residual is intentionally a verification kernel, not yet the paper's augmented-Lagrange solver. It retains the exact weighted gap and exposes the area normalization explicitly so later constraint laws can replace it without changing the overlap or force assembly.
 
 ## Phase 3 — consistent geometric linearization
 
@@ -32,7 +34,7 @@ Implement the derivatives described in Section 4 and Appendices A–B:
 - both inverse maps and shape functions;
 - `D`, `M`, weighted gap, nodal normal, pressure, and contact force.
 
-Topology is frozen during one generalized derivative evaluation. Candidate-facet discovery is rebuilt outside the smooth tangent.
+Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The numerical tangent introduced in Phase 2 is the verification oracle for every analytical contribution.
 
 ## Phase 4 — constraint enforcement
 
