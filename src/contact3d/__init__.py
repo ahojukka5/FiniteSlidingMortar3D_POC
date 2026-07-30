@@ -41,8 +41,13 @@ from .model import (
 )
 from .moving import (
     MortarWeightJacobian,
+    analytical_mortar_weight_jacobian,
     moving_mortar_contact_tangent,
     numerical_mortar_weight_jacobian,
+)
+from .operators import (
+    LocalMortarWeightLinearization,
+    integrate_facet_pair_linearized,
 )
 from .overlap import build_facet_overlap, integrate_facet_pair
 from .pallets import (
@@ -87,6 +92,7 @@ __all__ = [
     "GlobalMortarWeights",
     "InverseMapLinearization",
     "InverseMapTopologyError",
+    "LocalMortarWeightLinearization",
     "LocalMortarWeights",
     "MortarPallet",
     "MortarPalletLinearization",
@@ -98,6 +104,7 @@ __all__ = [
     "ProjectionPlane",
     "ProjectionPlaneJacobian",
     "SignedAreaLinearization",
+    "analytical_mortar_weight_jacobian",
     "assemble_mortar_weights",
     "averaged_nodal_normal_jacobian",
     "averaged_nodal_normals",
@@ -111,6 +118,7 @@ __all__ = [
     "fixed_mortar_contact_tangent",
     "infer_facet_kind",
     "integrate_facet_pair",
+    "integrate_facet_pair_linearized",
     "inverse_map_2d",
     "inverse_map_2d_linearized",
     "linearize_centroid_fan",

@@ -7,11 +7,11 @@ D = D(\mathbf x^s,\mathbf x^m), \qquad
 M = M(\mathbf x^s,\mathbf x^m).
 ```
 
-This slice adds a verification-level derivative of those operators while retaining the current facet-pair set. The overlap polygon, pallet decomposition, inverse maps, and quadrature values are rebuilt for each centered perturbation. Broad-phase candidates and unilateral activity remain frozen, so the result describes one smooth Newton branch rather than a topology or active-set event.
+Facet pairs and unilateral activity are frozen during one smooth derivative evaluation. Projection, clipping, pallet geometry, inverse maps, quadrature points, shape values, physical weights, and the assembled operators are differentiated analytically. The centered-difference operator derivative remains an independent oracle.
 
 ## Operator derivative
 
-`numerical_mortar_weight_jacobian` returns
+`analytical_mortar_weight_jacobian` returns
 
 ```math
 \mathrm dD, \qquad \mathrm dM,
@@ -23,7 +23,7 @@ with one derivative column per slave and master coordinate degree of freedom. Th
 \sum_B \mathrm dD_{AB} - \sum_C \mathrm dM_{AC} = 0.
 ```
 
-The same operator derivative must vanish under a common rigid translation of both surfaces.
+The same operator derivative must vanish under a common rigid translation of both surfaces. The numerical function `numerical_mortar_weight_jacobian` is retained solely for centered-difference verification.
 
 ## Complete smooth residual derivative
 
@@ -33,7 +33,7 @@ With
 \mathbf q_A = \sum_B D_{AB}\mathbf x^s_B
              - \sum_C M_{AC}\mathbf x^m_C,
 \qquad
-a_A = \sum_B D_{AB},
+ a_A = \sum_B D_{AB},
 ```
 
 the moving terms are
@@ -73,10 +73,8 @@ The force distributions also move:
 \mathrm d\mathbf f^m = -M^T\mathrm d\mathbf t - (\mathrm dM)^T\mathbf t.
 ```
 
-`moving_mortar_contact_tangent` assembles these terms together with the analytical Appendix A normal derivative and analytical penalty law.
+`moving_mortar_contact_tangent` assembles these terms with the analytical Appendix A normal derivative and analytical penalty law. The default geometry path is analytical; `geometry_jacobian="numerical"` selects the retained verification oracle.
 
-## Verification and remaining boundary
+## Nonsmooth boundary
 
-For smooth partial-overlap configurations, the decomposed tangent is compared against `numerical_contact_tangent` with frozen facet pairs and active rows. A 30-case randomized warped-`QUAD4` sweep produced a maximum relative Frobenius error of `1.35e-10` in the development environment.
-
-The geometric operator derivative in this slice is deliberately numerical. It establishes the exact tensor interface and force-law assembly that the fully analytical Section 4 / Appendix B implementation must match. The next slices will replace the numerical columns with derivatives of the projection plane, projected vertices, clipping intersections, pallets, inverse maps, and quadrature shape values.
+The analytical result describes one smooth overlap branch. Broad-phase changes, clipping classifications, zero-area pallets, singular inverse maps, and unilateral activation changes remain outer events. They are never hidden by an automatic numerical fallback.
