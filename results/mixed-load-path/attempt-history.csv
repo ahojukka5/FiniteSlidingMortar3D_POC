@@ -1,0 +1,5 @@
+attempt,start_parameter,target_parameter,action,prescribed_values,effective_load_norm,reaction_norm,inner_termination_reason
+1,0.0,0.75,cutback,-0.09;0.015,2.704163456597992,91.78235124467012,inner_equilibrium_failed
+2,0.0,0.375,accepted,-0.045;0.0075,1.352081728298996,45.89117562233506,converged
+3,0.375,0.75,accepted,-0.09;0.015,2.704163456597992,91.78235124467012,converged
+4,0.75,1.0,accepted,-0.12;0.02,3.605551275463989,122.37646832622684,converged

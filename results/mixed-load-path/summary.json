@@ -1,0 +1,94 @@
+{
+  "metrics": {
+    "converged": true,
+    "accepted_steps": 3,
+    "cutbacks": 1,
+    "attempts": 4,
+    "final_parameter": 1.0,
+    "final_tool_z": -0.12,
+    "final_tool_x": 0.02,
+    "final_effective_load_norm": 3.605551275463989,
+    "final_reaction_norm": 122.37646832622684,
+    "sparsity_reused": true
+  },
+  "accepted_steps": [
+    {
+      "parameter": 0.375,
+      "tool_z": -0.045,
+      "tool_x": 0.0075,
+      "prescribed_norm": 0.04562071897723664,
+      "effective_load_norm": 1.352081728298996,
+      "reaction_x": 0.0,
+      "reaction_y": -9.0,
+      "reaction_z": 45.0,
+      "state_multiplier": 10.375
+    },
+    {
+      "parameter": 0.75,
+      "tool_z": -0.09,
+      "tool_x": 0.015,
+      "prescribed_norm": 0.09124143795447329,
+      "effective_load_norm": 2.704163456597992,
+      "reaction_x": 0.0,
+      "reaction_y": -18.0,
+      "reaction_z": 90.0,
+      "state_multiplier": 10.75
+    },
+    {
+      "parameter": 1.0,
+      "tool_z": -0.12,
+      "tool_x": 0.02,
+      "prescribed_norm": 0.1216552506059644,
+      "effective_load_norm": 3.605551275463989,
+      "reaction_x": 0.0,
+      "reaction_y": -24.0,
+      "reaction_z": 120.0,
+      "state_multiplier": 11.0
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "start_parameter": 0.0,
+      "target_parameter": 0.75,
+      "action": "cutback",
+      "prescribed_values": "-0.09;0.015",
+      "effective_load_norm": 2.704163456597992,
+      "reaction_norm": 91.78235124467012,
+      "inner_termination_reason": "inner_equilibrium_failed"
+    },
+    {
+      "attempt": 2,
+      "start_parameter": 0.0,
+      "target_parameter": 0.375,
+      "action": "accepted",
+      "prescribed_values": "-0.045;0.0075",
+      "effective_load_norm": 1.352081728298996,
+      "reaction_norm": 45.89117562233506,
+      "inner_termination_reason": "converged"
+    },
+    {
+      "attempt": 3,
+      "start_parameter": 0.375,
+      "target_parameter": 0.75,
+      "action": "accepted",
+      "prescribed_values": "-0.09;0.015",
+      "effective_load_norm": 2.704163456597992,
+      "reaction_norm": 91.78235124467012,
+      "inner_termination_reason": "converged"
+    },
+    {
+      "attempt": 4,
+      "start_parameter": 0.75,
+      "target_parameter": 1.0,
+      "action": "accepted",
+      "prescribed_values": "-0.12;0.02",
+      "effective_load_norm": 3.605551275463989,
+      "reaction_norm": 122.37646832622684,
+      "inner_termination_reason": "converged"
+    }
+  ],
+  "penalties": [
+    100.0
+  ]
+}

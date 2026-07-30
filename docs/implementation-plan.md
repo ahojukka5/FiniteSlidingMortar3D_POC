@@ -65,12 +65,15 @@ Completed:
 - coupled bulk/contact equilibrium and outer augmentation driver;
 - adaptive load cutback and growth;
 - transactional normal-penalty escalation after under-resolved augmentations;
-- explicit attempt histories proving rollback across failed candidates.
+- explicit attempt histories proving rollback across failed candidates;
+- immutable prescribed-displacement, dead-load, and mixed continuation paths;
+- complete boundary-state rollback across cutbacks and penalty retries;
+- fixed symbolic CSR reuse when only boundary values and loads change;
+- constrained reaction vectors for every accepted path state.
 
 Remaining:
 
-- adaptive prescribed-displacement and mixed load paths;
-- local/interface-specific penalty indicators rather than uniform interface scaling;
+- scale-aware and local/interface-specific penalty indicators;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
 
@@ -90,6 +93,8 @@ Completed:
 - coupled bulk/contact sparse assembly and contact-event restart policies;
 - outer augmented-Lagrange iteration with per-interface KKT stopping criteria;
 - adaptive continuation controller with load cutback and penalty retries;
+- proportional and mixed boundary/load-path benchmark infrastructure;
+- separated matching-interface contact-onset benchmark harness;
 - machine-readable nonlinear, coupled, and continuation histories;
 - independent constitutive, element, dense-assembly, sparse-assembly, and coupled oracles;
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
@@ -100,8 +105,8 @@ Completed:
 
 Remaining:
 
-- fully coupled warped nonmatching moving-overlap load-path benchmark;
-- adaptive prescribed-displacement continuation for contact onset;
+- fully coupled warped nonmatching moving-overlap contact-onset benchmark;
+- scale-aware interface-local penalty control;
 - scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch convergence study;
