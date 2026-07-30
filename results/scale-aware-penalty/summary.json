@@ -1,0 +1,67 @@
+{
+  "metrics": {
+    "unit_invariant": true,
+    "updated_interfaces": [
+      1
+    ],
+    "converted_updated_interfaces": [
+      1
+    ],
+    "normalized_target": 1e-06,
+    "interface_count": 2,
+    "updated_interface_count": 1
+  },
+  "interfaces": [
+    {
+      "unit_system": "m-Pa",
+      "interface": 0,
+      "penetration": 1e-10,
+      "normalized_penetration": 1.414213562373095e-10,
+      "penalty_before": 100.0,
+      "penalty_after": 100.0,
+      "penalty_ratio_before": 0.23809523809523808,
+      "penalty_ratio_after": 0.23809523809523808,
+      "updated": false,
+      "reason": "resolved"
+    },
+    {
+      "unit_system": "m-Pa",
+      "interface": 1,
+      "penetration": 0.0002,
+      "normalized_penetration": 0.001414213562373095,
+      "penalty_before": 100.0,
+      "penalty_after": 525.0,
+      "penalty_ratio_before": 0.047619047619047616,
+      "penalty_ratio_after": 0.25,
+      "updated": true,
+      "reason": "interface[1] normalized_penetration=1.414214e-03 > 1.000000e-06; penalty_ratio 4.761905e-02 -> 2.500000e-01"
+    },
+    {
+      "unit_system": "mm-MPa",
+      "interface": 0,
+      "penetration": 1.0000000000000001e-07,
+      "normalized_penetration": 1.414213562373095e-10,
+      "penalty_before": 9.999999999999998e-08,
+      "penalty_after": 9.999999999999998e-08,
+      "penalty_ratio_before": 0.23809523809523803,
+      "penalty_ratio_after": 0.23809523809523803,
+      "updated": false,
+      "reason": "resolved"
+    },
+    {
+      "unit_system": "mm-MPa",
+      "interface": 1,
+      "penetration": 0.2,
+      "normalized_penetration": 0.001414213562373095,
+      "penalty_before": 9.999999999999998e-08,
+      "penalty_after": 5.250000000000001e-07,
+      "penalty_ratio_before": 0.0476190476190476,
+      "penalty_ratio_after": 0.25,
+      "updated": true,
+      "reason": "interface[1] normalized_penetration=1.414214e-03 > 1.000000e-06; penalty_ratio 4.761905e-02 -> 2.500000e-01"
+    }
+  ],
+  "reasons": [
+    "interface[1] normalized_penetration=1.414214e-03 > 1.000000e-06; penalty_ratio 4.761905e-02 -> 2.500000e-01"
+  ]
+}

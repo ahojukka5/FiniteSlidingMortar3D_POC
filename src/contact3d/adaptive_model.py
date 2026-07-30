@@ -42,6 +42,13 @@ class AdaptiveContactAttempt:
     prescribed_values: tuple[float, ...] = ()
     effective_load_norm: float = 0.0
     reaction_norm: float = 0.0
+    normalized_equilibrium_residual: float = 0.0
+    normalized_maximum_penetration: float = 0.0
+    interface_penetrations: tuple[float, ...] = ()
+    normalized_interface_penetrations: tuple[float, ...] = ()
+    penalty_ratios_before: tuple[float, ...] = ()
+    penalty_ratios_after: tuple[float, ...] = ()
+    penalty_update_reasons: tuple[str, ...] = ()
 
     @property
     def start_parameter(self) -> float:
