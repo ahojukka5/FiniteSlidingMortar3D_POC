@@ -21,7 +21,7 @@
 - force and moment balance diagnostics;
 - frozen-pair numerical tangent oracle.
 
-The penalty residual is intentionally a verification kernel, not yet the paper's augmented-Lagrange solver. It retains the exact weighted gap and exposes the area normalization explicitly so later constraint laws can replace it without changing the overlap or force assembly.
+The penalty residual remains the zero-multiplier baseline for verification. The same geometry and force assembly now also serve the projected augmented-Lagrange law in Phase 4.
 
 ## Phase 3 — consistent geometric linearization — smooth branch complete
 
@@ -50,10 +50,22 @@ Remaining generalized derivatives:
 
 Topology, facet pairs, and unilateral activity are frozen during one smooth derivative evaluation. Clipping states inside a configurable event band, degenerate pallets, and singular inverse maps are rejected as outer topology events instead of receiving an arbitrary derivative.
 
-## Phase 4 — constraint enforcement
+## Phase 4 — constraint enforcement — in progress
 
-- augmented-Lagrange update matching the 2004 examples;
-- exact KKT diagnostics;
+Completed:
+
+- immutable nonnegative nodal multiplier state;
+- projected update `lambda <- max(0, lambda + kappa g)`;
+- exact primal, dual, complementarity, support, and projection-form KKT diagnostics;
+- explicit separation between inner equilibrium evaluation and accepted outer augmentation;
+- analytical augmented-Lagrange tangent with multipliers and activity frozen;
+- independent centered-difference tangent oracle;
+- penalty equivalence at zero multipliers and pressure-release regressions.
+
+Remaining:
+
+- outer equilibrium/augmentation driver once bulk mechanics is available;
+- adaptive penalty and augmentation stopping policies;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
 
