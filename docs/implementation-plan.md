@@ -23,13 +23,12 @@
 
 The penalty residual is intentionally a verification kernel, not yet the paper's augmented-Lagrange solver. It retains the exact weighted gap and exposes the area normalization explicitly so later constraint laws can replace it without changing the overlap or force assembly.
 
-## Phase 3 — consistent geometric linearization — in progress
+## Phase 3 — consistent geometric linearization — smooth branch complete
 
 Completed:
 
 - analytical Appendix A nominal-normal Jacobian;
 - analytical fixed-`D/M` force-law tangent;
-- topology-frozen numerical Jacobians of the moving `D` and `M` operators;
 - complete smooth tangent decomposition including row-area and force-distribution derivatives;
 - analytical projection-plane origin, tangent, and normal Jacobians;
 - analytical projected slave and master vertex Jacobians;
@@ -37,15 +36,19 @@ Completed:
 - analytical centroid-fan centers, pallet vertices, signed areas, and total area;
 - analytical `TRI3` and `QUAD4` inverse-parent Jacobians;
 - analytical pallet quadrature-point, shape-value, and integration-weight Jacobians;
-- derivative-level momentum consistency and rigid-translation tests;
+- analytical local and global `D` and `M` operator Jacobians;
+- fully analytical smooth-branch contact tangent;
+- retained numerical `D`/`M` and residual-tangent oracles;
+- derivative-level momentum, overlap-area, and rigid-translation tests;
 - comparison against independent centered-difference oracles.
 
-Remaining analytical derivatives from Section 4 and Appendices A–B:
+Remaining generalized derivatives:
 
-- explicit edge-on-edge and on-vertex generalized derivatives;
-- analytical local and global `D` and `M` operator Jacobians replacing the numerical geometry oracle.
+- explicit edge-on-edge and on-vertex clipping derivatives;
+- transition policies for zero-area and newly appearing/disappearing pallets;
+- semismooth treatment of those topology events in the nonlinear solver.
 
-Topology, facet pairs, and unilateral activity are frozen during one generalized derivative evaluation. The moving-operator Jacobian defines the tensor contract that every analytical geometry layer must satisfy. Clipping states inside a configurable event band, degenerate pallets, and singular inverse maps are rejected as outer topology events instead of receiving an arbitrary smooth derivative.
+Topology, facet pairs, and unilateral activity are frozen during one smooth derivative evaluation. Clipping states inside a configurable event band, degenerate pallets, and singular inverse maps are rejected as outer topology events instead of receiving an arbitrary derivative.
 
 ## Phase 4 — constraint enforcement
 
