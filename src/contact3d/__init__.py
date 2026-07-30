@@ -55,6 +55,14 @@ from .pallets import (
     linearize_facet_pallets,
     polygon_signed_area_linearized,
 )
+from .parametric import (
+    FacetQuadratureLinearization,
+    InverseMapLinearization,
+    InverseMapTopologyError,
+    MortarQuadraturePointLinearization,
+    inverse_map_2d_linearized,
+    linearize_facet_quadrature,
+)
 from .shapes import infer_facet_kind, inverse_map_2d, shape_values
 from .surface import (
     ContactSurface,
@@ -75,10 +83,14 @@ __all__ = [
     "FacetIntersectionLinearization",
     "FacetOverlap",
     "FacetPalletLinearization",
+    "FacetQuadratureLinearization",
     "GlobalMortarWeights",
+    "InverseMapLinearization",
+    "InverseMapTopologyError",
     "LocalMortarWeights",
     "MortarPallet",
     "MortarPalletLinearization",
+    "MortarQuadraturePointLinearization",
     "MortarWeightJacobian",
     "PalletFanLinearization",
     "PalletTopologyError",
@@ -100,10 +112,12 @@ __all__ = [
     "infer_facet_kind",
     "integrate_facet_pair",
     "inverse_map_2d",
+    "inverse_map_2d_linearized",
     "linearize_centroid_fan",
     "linearize_clipping_topology",
     "linearize_facet_intersection",
     "linearize_facet_pallets",
+    "linearize_facet_quadrature",
     "moving_mortar_contact_tangent",
     "numerical_contact_tangent",
     "numerical_mortar_weight_jacobian",
