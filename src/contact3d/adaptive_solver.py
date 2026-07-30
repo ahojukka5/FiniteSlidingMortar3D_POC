@@ -8,6 +8,7 @@ from typing import Callable
 import numpy as np
 
 from .adaptive_model import (
+    AdaptiveAcceptedStep,
     AdaptiveAttemptAction,
     AdaptiveContactAttempt,
     AdaptiveContactResult,
@@ -22,6 +23,7 @@ from .coupled import (
     solve_augmented_contact,
 )
 from .enforcement_state import AugmentedLagrangeState
+from .load_path import CoupledLoadPath, CoupledPathState, LoadFactorPath
 from .model import FloatArray
 
 AdaptiveSolver = Callable[..., AugmentedContactResult]
@@ -90,6 +92,21 @@ def _contact_event_restarts(result: AugmentedContactResult) -> int:
     return sum(equilibrium.contact_event_restarts for equilibrium in result.equilibria)
 
 
+def _constrained_reaction(result: AugmentedContactResult) -> FloatArray:
+    evaluation = result.equilibrium.evaluation
+    residual = getattr(evaluation, "residual", None)
+    free_dofs = getattr(evaluation, "free_dofs", None)
+    if residual is None or free_dofs is None:
+        return np.empty(0, dtype=float)
+    values = np.asarray(residual, dtype=float).reshape(-1)
+    free = np.asarray(free_dofs, dtype=np.int64).reshape(-1)
+    reaction = np.zeros_like(values)
+    constrained = np.ones(len(values), dtype=bool)
+    constrained[free] = False
+    reaction[constrained] = values[constrained]
+    return reaction
+
+
 def _attempt(
     *,
     attempt: int,
@@ -99,6 +116,8 @@ def _attempt(
     result: AugmentedContactResult,
     penalties_before: tuple[float, ...],
     penalties_after: tuple[float, ...],
+    path_state: CoupledPathState,
+    reaction: FloatArray,
 ) -> AdaptiveContactAttempt:
     return AdaptiveContactAttempt(
         attempt=attempt,
@@ -114,6 +133,11 @@ def _attempt(
         maximum_penetration=_maximum_penetration(result),
         penalties_before=penalties_before,
         penalties_after=penalties_after,
+        path_values=path_state.values,
+        prescribed_dofs=tuple(int(value) for value in path_state.prescribed_dofs),
+        prescribed_values=tuple(float(value) for value in path_state.prescribed_values),
+        effective_load_norm=path_state.effective_load_norm,
+        reaction_norm=float(np.linalg.norm(reaction)),
     )
 
 
@@ -127,6 +151,43 @@ def _increased_penalties(
     )
 
 
+def _apply_path_constraints(
+    displacement: FloatArray,
+    path_state: CoupledPathState,
+) -> FloatArray:
+    values = np.asarray(displacement, dtype=float).reshape(-1).copy()
+    if len(path_state.prescribed_dofs):
+        if np.any(path_state.prescribed_dofs >= len(values)):
+            raise ValueError("path-prescribed dof is outside the displacement vector")
+        values[path_state.prescribed_dofs] = path_state.prescribed_values
+    return values
+
+
+def _result(
+    *,
+    problem: CoupledEquilibriumProblem,
+    displacement: FloatArray,
+    states: tuple[AugmentedLagrangeState, ...],
+    load_factor: float,
+    converged: bool,
+    termination_reason: str,
+    accepted_results: list[AugmentedContactResult],
+    attempts: list[AdaptiveContactAttempt],
+    accepted_steps: list[AdaptiveAcceptedStep],
+) -> AdaptiveContactResult:
+    return AdaptiveContactResult(
+        problem,
+        displacement,
+        states,
+        load_factor,
+        converged,
+        termination_reason,
+        tuple(accepted_results),
+        tuple(attempts),
+        tuple(accepted_steps),
+    )
+
+
 def solve_adaptive_contact_path(
     problem: CoupledEquilibriumProblem,
     target_load_factor: float,
@@ -134,15 +195,22 @@ def solve_adaptive_contact_path(
     initial_states: tuple[AugmentedLagrangeState, ...] | None = None,
     *,
     initial_load_factor: float = 0.0,
+    path: CoupledLoadPath | None = None,
     options: AdaptiveContactOptions | None = None,
     tolerance: float = 1.0e-12,
     _solver: AdaptiveSolver = solve_augmented_contact,
 ) -> AdaptiveContactResult:
-    """Advance a monotone load path with transactional cutback and penalty control.
+    """Advance an immutable boundary/load path with cutback and penalty control.
 
-    A failed candidate rolls displacement, multipliers, and penalties back to the last
-    accepted load state. A penalty increase is committed only after the retried candidate
-    reaches coupled equilibrium and the requested KKT tolerances.
+    With ``path=None`` this is backward compatible with the original scalar dead-load
+    continuation: the supplied problem stays fixed and ``load_factor`` is passed to the
+    inner solver. A custom path may instead replace prescribed values and the dead-load
+    vector at every candidate while returning its own inner-solver load factor.
+
+    A failed candidate rolls displacement, multipliers, penalties, boundary values, and
+    named path parameters back to the last accepted state. A penalty increase is committed
+    only after the retried candidate reaches coupled equilibrium and the requested KKT
+    tolerances.
     """
 
     settings = AdaptiveContactOptions() if options is None else options
@@ -151,7 +219,10 @@ def solve_adaptive_contact_path(
     if not np.isfinite(target_load_factor) or target_load_factor <= initial_load_factor:
         raise ValueError("target_load_factor must exceed the initial load factor")
 
-    total_dofs = 3 * problem.mesh.node_count
+    continuation = LoadFactorPath() if path is None else path
+    accepted_path_state = continuation.evaluate(problem, float(initial_load_factor))
+    accepted_problem = accepted_path_state.problem
+    total_dofs = 3 * accepted_problem.mesh.node_count
     accepted_displacement = (
         np.zeros(total_dofs, dtype=float)
         if initial_displacement is None
@@ -159,33 +230,41 @@ def solve_adaptive_contact_path(
     )
     if accepted_displacement.shape != (total_dofs,):
         raise ValueError("initial_displacement must match the mesh DOF count")
-    accepted_states = problem.initial_states() if initial_states is None else tuple(initial_states)
-    if len(accepted_states) != len(problem.interfaces):
+    accepted_displacement = _apply_path_constraints(
+        accepted_displacement,
+        accepted_path_state,
+    )
+    accepted_states = (
+        accepted_problem.initial_states() if initial_states is None else tuple(initial_states)
+    )
+    if len(accepted_states) != len(accepted_problem.interfaces):
         raise ValueError("one initial state is required for every contact interface")
 
-    accepted_problem = problem
     accepted_factor = float(initial_load_factor)
     accepted_results: list[AugmentedContactResult] = []
+    accepted_steps: list[AdaptiveAcceptedStep] = []
     attempts: list[AdaptiveContactAttempt] = []
     step = settings.load.initial_step
     attempt_index = 0
 
     while accepted_factor < target_load_factor:
         if attempt_index >= settings.load.maximum_attempts:
-            return AdaptiveContactResult(
-                accepted_problem,
-                accepted_displacement,
-                accepted_states,
-                accepted_factor,
-                False,
-                "maximum_attempts",
-                tuple(accepted_results),
-                tuple(attempts),
+            return _result(
+                problem=accepted_problem,
+                displacement=accepted_displacement,
+                states=accepted_states,
+                load_factor=accepted_factor,
+                converged=False,
+                termination_reason="maximum_attempts",
+                accepted_results=accepted_results,
+                attempts=attempts,
+                accepted_steps=accepted_steps,
             )
 
         candidate = min(target_load_factor, accepted_factor + step)
-        trial_problem = accepted_problem
-        trial_displacement = accepted_displacement
+        trial_path_state = continuation.evaluate(accepted_problem, candidate)
+        trial_problem = trial_path_state.problem
+        trial_displacement = accepted_displacement.copy()
         trial_states = accepted_states
         penalty_updates = 0
 
@@ -196,10 +275,11 @@ def solve_adaptive_contact_path(
                 trial_problem,
                 trial_displacement,
                 trial_states,
-                load_factor=candidate,
+                load_factor=trial_path_state.solver_load_factor,
                 options=settings.augmented,
                 tolerance=tolerance,
             )
+            reaction = _constrained_reaction(result)
             if result.converged:
                 penalties_after = contact_penalties(trial_problem)
                 attempts.append(
@@ -211,13 +291,19 @@ def solve_adaptive_contact_path(
                         result=result,
                         penalties_before=penalties_before,
                         penalties_after=penalties_after,
+                        path_state=trial_path_state,
+                        reaction=reaction,
                     )
                 )
                 accepted_problem = trial_problem
+                accepted_path_state = trial_path_state
                 accepted_displacement = result.displacement.copy()
                 accepted_states = tuple(result.states)
                 accepted_factor = candidate
                 accepted_results.append(result)
+                accepted_steps.append(
+                    AdaptiveAcceptedStep(accepted_path_state, result, reaction)
+                )
                 if (
                     _newton_iterations(result) <= settings.load.easy_newton_iterations
                     and penalty_updates == 0
@@ -248,9 +334,12 @@ def solve_adaptive_contact_path(
                         result=result,
                         penalties_before=penalties_before,
                         penalties_after=increased,
+                        path_state=trial_path_state,
+                        reaction=reaction,
                     )
                 )
                 trial_problem = with_contact_penalties(trial_problem, increased)
+                trial_path_state = trial_path_state.with_problem(trial_problem)
                 trial_displacement = result.displacement.copy()
                 trial_states = tuple(result.states)
                 penalty_updates += 1
@@ -267,29 +356,33 @@ def solve_adaptive_contact_path(
                     result=result,
                     penalties_before=penalties_before,
                     penalties_after=contact_penalties(accepted_problem),
+                    path_state=trial_path_state,
+                    reaction=reaction,
                 )
             )
             step *= settings.load.cutback_factor
             if step < settings.load.minimum_step:
-                return AdaptiveContactResult(
-                    accepted_problem,
-                    accepted_displacement,
-                    accepted_states,
-                    accepted_factor,
-                    False,
-                    "minimum_step",
-                    tuple(accepted_results),
-                    tuple(attempts),
+                return _result(
+                    problem=accepted_problem,
+                    displacement=accepted_displacement,
+                    states=accepted_states,
+                    load_factor=accepted_factor,
+                    converged=False,
+                    termination_reason="minimum_step",
+                    accepted_results=accepted_results,
+                    attempts=attempts,
+                    accepted_steps=accepted_steps,
                 )
             break
 
-    return AdaptiveContactResult(
-        accepted_problem,
-        accepted_displacement,
-        accepted_states,
-        accepted_factor,
-        True,
-        "converged",
-        tuple(accepted_results),
-        tuple(attempts),
+    return _result(
+        problem=accepted_problem,
+        displacement=accepted_displacement,
+        states=accepted_states,
+        load_factor=accepted_factor,
+        converged=True,
+        termination_reason="converged",
+        accepted_results=accepted_results,
+        attempts=attempts,
+        accepted_steps=accepted_steps,
     )

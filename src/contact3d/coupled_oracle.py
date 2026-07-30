@@ -36,6 +36,11 @@ class FrozenMatchingMortarInterface:
     normal: np.ndarray
     penalty: float
     event_gap: float | None = None
+    initial_normal_gap: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not np.isfinite(self.initial_normal_gap):
+            raise ValueError("initial_normal_gap must be finite")
 
     @property
     def dofs(self) -> np.ndarray:
@@ -54,7 +59,7 @@ class FrozenMatchingMortarInterface:
         master = values[self.master_nodes]
         row_areas = np.sum(MATCHING_QUAD_MASS, axis=1)
         weighted_gap = MATCHING_QUAD_MASS @ slave - MATCHING_QUAD_MASS @ master
-        normal_gaps = weighted_gap @ self.normal / row_areas
+        normal_gaps = self.initial_normal_gap + weighted_gap @ self.normal / row_areas
         return row_areas, normal_gaps
 
     def evaluate(

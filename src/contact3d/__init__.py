@@ -1,6 +1,7 @@
 """Three-dimensional finite-sliding mortar contact research package."""
 
 from .bulk import (
+    AdaptiveAcceptedStep,
     AdaptiveContactAttempt,
     AdaptiveContactOptions,
     AdaptiveContactResult,
@@ -17,12 +18,17 @@ from .bulk import (
     CoupledContactInterface,
     CoupledEquilibriumEvaluation,
     CoupledEquilibriumProblem,
+    CoupledLoadPath,
     CoupledNewtonIteration,
     CoupledNewtonResult,
+    CoupledPathState,
     DeadLoad,
     DirichletConstraints,
     EquilibriumEvaluation,
     EquilibriumProblem,
+    LinearBoundaryPath,
+    LinearPathValue,
+    LoadFactorPath,
     MortarContactInterface,
     NeoHookeanMaterial,
     NeoHookeanResponse,
@@ -53,6 +59,7 @@ from .bulk import (
     solve_load_steps,
     tet4_deformation_gradient,
     with_contact_penalties,
+    with_coupled_boundary_data,
 )
 from .clipping import (
     ClippedPolygonLinearization,
@@ -143,6 +150,7 @@ from .surface import (
 )
 
 __all__ = [
+    "AdaptiveAcceptedStep",
     "AdaptiveContactAttempt",
     "AdaptiveContactOptions",
     "AdaptiveContactResult",
@@ -170,8 +178,10 @@ __all__ = [
     "CoupledContactInterface",
     "CoupledEquilibriumEvaluation",
     "CoupledEquilibriumProblem",
+    "CoupledLoadPath",
     "CoupledNewtonIteration",
     "CoupledNewtonResult",
+    "CoupledPathState",
     "DeadLoad",
     "DirichletConstraints",
     "EquilibriumEvaluation",
@@ -184,6 +194,9 @@ __all__ = [
     "InverseMapLinearization",
     "InverseMapTopologyError",
     "KKTDiagnostics",
+    "LinearBoundaryPath",
+    "LinearPathValue",
+    "LoadFactorPath",
     "LocalMortarWeightLinearization",
     "LocalMortarWeights",
     "MortarContactInterface",
@@ -265,4 +278,5 @@ __all__ = [
     "trace_clipping_topology",
     "triangulate_convex_polygon",
     "with_contact_penalties",
+    "with_coupled_boundary_data",
 ]

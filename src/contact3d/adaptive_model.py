@@ -5,8 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+import numpy as np
+
 from .coupled import AugmentedContactResult, CoupledEquilibriumProblem
 from .enforcement_state import AugmentedLagrangeState
+from .load_path import CoupledPathState
 from .model import FloatArray
 
 AdaptiveAttemptAction = Literal["accepted", "cutback", "penalty_increase"]
@@ -34,6 +37,45 @@ class AdaptiveContactAttempt:
     maximum_penetration: float
     penalties_before: tuple[float, ...]
     penalties_after: tuple[float, ...]
+    path_values: tuple[tuple[str, float], ...] = ()
+    prescribed_dofs: tuple[int, ...] = ()
+    prescribed_values: tuple[float, ...] = ()
+    effective_load_norm: float = 0.0
+    reaction_norm: float = 0.0
+
+    @property
+    def start_parameter(self) -> float:
+        return self.start_load_factor
+
+    @property
+    def target_parameter(self) -> float:
+        return self.target_load_factor
+
+
+@dataclass(frozen=True, slots=True)
+class AdaptiveAcceptedStep:
+    """One committed path state, equilibrium solution, and constrained reaction."""
+
+    path_state: CoupledPathState
+    result: AugmentedContactResult
+    reaction: FloatArray
+
+    def __post_init__(self) -> None:
+        values = np.asarray(self.reaction, dtype=float)
+        if values.ndim != 1 or not np.all(np.isfinite(values)):
+            raise ValueError("accepted-step reaction must be a finite flat vector")
+        force = self.path_state.effective_force
+        if len(force) and values.shape != force.shape:
+            raise ValueError("accepted-step reaction must match the global force vector")
+        object.__setattr__(self, "reaction", values.copy())
+
+    @property
+    def parameter(self) -> float:
+        return self.path_state.parameter
+
+    @property
+    def reaction_norm(self) -> float:
+        return float(np.linalg.norm(self.reaction))
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +90,7 @@ class AdaptiveContactResult:
     termination_reason: AdaptiveTerminationReason
     accepted_results: tuple[AugmentedContactResult, ...]
     attempts: tuple[AdaptiveContactAttempt, ...]
+    accepted_steps: tuple[AdaptiveAcceptedStep, ...] = ()
 
     @property
     def accepted_step_count(self) -> int:
@@ -60,3 +103,7 @@ class AdaptiveContactResult:
     @property
     def penalty_update_count(self) -> int:
         return sum(attempt.action == "penalty_increase" for attempt in self.attempts)
+
+    @property
+    def final_path_state(self) -> CoupledPathState | None:
+        return self.accepted_steps[-1].path_state if self.accepted_steps else None
