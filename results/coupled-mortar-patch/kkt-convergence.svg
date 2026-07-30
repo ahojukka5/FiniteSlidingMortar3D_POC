@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460">
+<rect width="100%" height="100%" fill="white"/>
+<text x="380.0" y="24" text-anchor="middle" font-family="sans-serif" font-size="16">Augmented-Lagrange KKT convergence</text>
+<line x1="82" y1="38" x2="82" y2="392" stroke="black"/>
+<line x1="82" y1="392" x2="732" y2="392" stroke="black"/>
+<text x="407.0" y="442" text-anchor="middle" font-family="sans-serif" font-size="13">augmentation</text>
+<text x="18" y="215.0" text-anchor="middle" transform="rotate(-90 18 215.0)" font-family="sans-serif" font-size="13">residual magnitude</text>
+<text x="82.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">0</text>
+<text x="212.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">1</text>
+<text x="342.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">2</text>
+<text x="472.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">3</text>
+<text x="602.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">4</text>
+<text x="732.00" y="414" text-anchor="middle" font-family="monospace" font-size="11">5</text>
+<line x1="82" y1="392.00" x2="732" y2="392.00" stroke="#dddddd"/>
+<text x="72" y="396.00" text-anchor="end" font-family="monospace" font-size="11">1e-10</text>
+<line x1="82" y1="333.00" x2="732" y2="333.00" stroke="#dddddd"/>
+<text x="72" y="337.00" text-anchor="end" font-family="monospace" font-size="11">1e-8</text>
+<line x1="82" y1="274.00" x2="732" y2="274.00" stroke="#dddddd"/>
+<text x="72" y="278.00" text-anchor="end" font-family="monospace" font-size="11">1e-6</text>
+<line x1="82" y1="215.00" x2="732" y2="215.00" stroke="#dddddd"/>
+<text x="72" y="219.00" text-anchor="end" font-family="monospace" font-size="11">1e-4</text>
+<line x1="82" y1="156.00" x2="732" y2="156.00" stroke="#dddddd"/>
+<text x="72" y="160.00" text-anchor="end" font-family="monospace" font-size="11">1e-2</text>
+<line x1="82" y1="97.00" x2="732" y2="97.00" stroke="#dddddd"/>
+<text x="72" y="101.00" text-anchor="end" font-family="monospace" font-size="11">1e0</text>
+<line x1="82" y1="38.00" x2="732" y2="38.00" stroke="#dddddd"/>
+<text x="72" y="42.00" text-anchor="end" font-family="monospace" font-size="11">1e2</text>
+<polyline points="82.00,174.98 212.00,198.93 342.00,241.10 472.00,283.26 602.00,325.42 732.00,367.59" fill="none" stroke="black" stroke-width="2"/>
+<text x="724" y="56" text-anchor="end" font-family="sans-serif" font-size="12">penetration</text>
+<polyline points="82.00,62.41 212.00,86.37 342.00,128.53 472.00,170.69 602.00,212.86 732.00,255.02" fill="none" stroke="black" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="724" y="74" text-anchor="end" font-family="sans-serif" font-size="12">projection</text>
+</svg>
