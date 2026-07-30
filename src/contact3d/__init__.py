@@ -1,6 +1,11 @@
 """Three-dimensional finite-sliding mortar contact research package."""
 
 from .bulk import (
+    AdaptiveContactAttempt,
+    AdaptiveContactOptions,
+    AdaptiveContactResult,
+    AdaptiveLoadOptions,
+    AdaptivePenaltyOptions,
     AugmentationIteration,
     AugmentedContactOptions,
     AugmentedContactResult,
@@ -32,6 +37,7 @@ from .bulk import (
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
+    contact_penalties,
     evaluate_coupled_equilibrium,
     evaluate_equilibrium,
     evaluate_neo_hookean,
@@ -40,11 +46,13 @@ from .bulk import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
     numerical_tet4_tangent,
+    solve_adaptive_contact_path,
     solve_augmented_contact,
     solve_coupled_equilibrium,
     solve_equilibrium,
     solve_load_steps,
     tet4_deformation_gradient,
+    with_contact_penalties,
 )
 from .clipping import (
     ClippedPolygonLinearization,
@@ -135,6 +143,11 @@ from .surface import (
 )
 
 __all__ = [
+    "AdaptiveContactAttempt",
+    "AdaptiveContactOptions",
+    "AdaptiveContactResult",
+    "AdaptiveLoadOptions",
+    "AdaptivePenaltyOptions",
     "AugmentationIteration",
     "AugmentedContactOptions",
     "AugmentedContactResult",
@@ -207,6 +220,7 @@ __all__ = [
     "build_facet_overlap",
     "clip_convex_polygon",
     "clip_convex_polygon_linearized",
+    "contact_penalties",
     "discover_facet_pairs",
     "evaluate_augmented_lagrange",
     "evaluate_contact",
@@ -242,6 +256,7 @@ __all__ = [
     "project_to_plane_jacobian",
     "replay_clipping_topology",
     "shape_values",
+    "solve_adaptive_contact_path",
     "solve_augmented_contact",
     "solve_coupled_equilibrium",
     "solve_equilibrium",
@@ -249,4 +264,5 @@ __all__ = [
     "tet4_deformation_gradient",
     "trace_clipping_topology",
     "triangulate_convex_polygon",
+    "with_contact_penalties",
 ]

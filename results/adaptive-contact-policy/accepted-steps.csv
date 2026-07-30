@@ -1,0 +1,4 @@
+accepted_step,load_factor,step_size,penalty,newton_iterations,maximum_penetration
+1,0.4,0.4,400.0,3,4e-09
+2,0.8,0.4,400.0,3,4e-09
+3,1.0,0.19999999999999996,400.0,3,4e-09

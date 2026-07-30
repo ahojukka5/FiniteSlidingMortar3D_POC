@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460">
+<rect width="100%" height="100%" fill="white"/>
+<text x="380.0" y="24" text-anchor="middle" font-family="sans-serif" font-size="16">Committed normal-penalty path</text>
+<line x1="82" y1="38" x2="82" y2="392" stroke="black"/>
+<line x1="82" y1="392" x2="732" y2="392" stroke="black"/>
+<text x="407.0" y="442" text-anchor="middle" font-family="sans-serif" font-size="13">accepted step</text>
+<text x="18" y="215.0" text-anchor="middle" transform="rotate(-90 18 215.0)" font-family="sans-serif" font-size="13">normal penalty</text>
+<polyline points="82.00,58.12 407.00,58.12 732.00,58.12" fill="none" stroke="black" stroke-width="2"/>
+<text x="724" y="56" text-anchor="end" font-family="sans-serif" font-size="12">penalty</text>
+</svg>

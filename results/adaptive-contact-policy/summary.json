@@ -1,0 +1,136 @@
+{
+  "metrics": {
+    "converged": true,
+    "termination_reason": "converged",
+    "accepted_steps": 3,
+    "cutbacks": 1,
+    "penalty_updates": 1,
+    "attempts": 5,
+    "final_load_factor": 1.0,
+    "initial_penalty": 100.0,
+    "final_penalty": 400.0
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "start_load_factor": 0.0,
+      "target_load_factor": 0.8,
+      "step_size": 0.8,
+      "action": "cutback",
+      "inner_termination_reason": "inner_equilibrium_failed",
+      "augmentations": 3,
+      "newton_iterations": 12,
+      "contact_event_restarts": 1,
+      "equilibrium_residual": 0.0002,
+      "maximum_penetration": 0.003,
+      "penalties_before": [
+        100.0
+      ],
+      "penalties_after": [
+        100.0
+      ]
+    },
+    {
+      "attempt": 2,
+      "start_load_factor": 0.0,
+      "target_load_factor": 0.4,
+      "step_size": 0.4,
+      "action": "penalty_increase",
+      "inner_termination_reason": "maximum_augmentations",
+      "augmentations": 3,
+      "newton_iterations": 7,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 0.0002,
+      "maximum_penetration": 0.002,
+      "penalties_before": [
+        100.0
+      ],
+      "penalties_after": [
+        400.0
+      ]
+    },
+    {
+      "attempt": 3,
+      "start_load_factor": 0.0,
+      "target_load_factor": 0.4,
+      "step_size": 0.4,
+      "action": "accepted",
+      "inner_termination_reason": "converged",
+      "augmentations": 2,
+      "newton_iterations": 3,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 1e-12,
+      "maximum_penetration": 4e-09,
+      "penalties_before": [
+        400.0
+      ],
+      "penalties_after": [
+        400.0
+      ]
+    },
+    {
+      "attempt": 4,
+      "start_load_factor": 0.4,
+      "target_load_factor": 0.8,
+      "step_size": 0.4,
+      "action": "accepted",
+      "inner_termination_reason": "converged",
+      "augmentations": 2,
+      "newton_iterations": 3,
+      "contact_event_restarts": 1,
+      "equilibrium_residual": 1e-12,
+      "maximum_penetration": 4e-09,
+      "penalties_before": [
+        400.0
+      ],
+      "penalties_after": [
+        400.0
+      ]
+    },
+    {
+      "attempt": 5,
+      "start_load_factor": 0.8,
+      "target_load_factor": 1.0,
+      "step_size": 0.19999999999999996,
+      "action": "accepted",
+      "inner_termination_reason": "converged",
+      "augmentations": 2,
+      "newton_iterations": 3,
+      "contact_event_restarts": 1,
+      "equilibrium_residual": 1e-12,
+      "maximum_penetration": 4e-09,
+      "penalties_before": [
+        400.0
+      ],
+      "penalties_after": [
+        400.0
+      ]
+    }
+  ],
+  "accepted_path": [
+    {
+      "accepted_step": 1,
+      "load_factor": 0.4,
+      "step_size": 0.4,
+      "penalty": 400.0,
+      "newton_iterations": 3,
+      "maximum_penetration": 4e-09
+    },
+    {
+      "accepted_step": 2,
+      "load_factor": 0.8,
+      "step_size": 0.4,
+      "penalty": 400.0,
+      "newton_iterations": 3,
+      "maximum_penetration": 4e-09
+    },
+    {
+      "accepted_step": 3,
+      "load_factor": 1.0,
+      "step_size": 0.19999999999999996,
+      "penalty": 400.0,
+      "newton_iterations": 3,
+      "maximum_penetration": 4e-09
+    }
+  ]
+}
