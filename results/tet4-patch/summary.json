@@ -1,0 +1,84 @@
+{
+  "mesh": {
+    "node_count": 9,
+    "element_count": 12,
+    "reference_volume": 1.0
+  },
+  "material": {
+    "shear_modulus": 80.76923076923076,
+    "bulk_modulus": 174.99999999999997,
+    "lame_lambda": 121.15384615384613
+  },
+  "deformation_gradient": [
+    [
+      1.08,
+      0.12,
+      -0.04
+    ],
+    [
+      0.03,
+      0.94,
+      0.08
+    ],
+    [
+      0.02,
+      -0.05,
+      1.11
+    ]
+  ],
+  "metrics": {
+    "minimum_jacobian": 1.1282,
+    "interior_residual_norm": 1.9850340605588998e-14,
+    "force_balance_norm": 2.3914935841127266e-15,
+    "moment_balance_norm": 4.7808327925834314e-15,
+    "maximum_deformation_gradient_error": 1.8660980897839135e-16,
+    "total_energy": 3.5893094034631945
+  },
+  "tangent_convergence": [
+    {
+      "step": 0.01,
+      "relative_error": 0.00012389171135735876,
+      "observed_order": null
+    },
+    {
+      "step": 0.003,
+      "relative_error": 1.1148460892286276e-05,
+      "observed_order": 2.0001335811662813
+    },
+    {
+      "step": 0.001,
+      "relative_error": 1.23870043419464e-06,
+      "observed_order": 2.000012817418363
+    },
+    {
+      "step": 0.0003,
+      "relative_error": 1.1148265226555335e-07,
+      "observed_order": 2.0000028818752393
+    },
+    {
+      "step": 0.0001,
+      "relative_error": 1.2386505107713988e-08,
+      "observed_order": 2.000033527912851
+    },
+    {
+      "step": 3e-05,
+      "relative_error": 1.118485543505363e-09,
+      "observed_order": 1.9972477755395366
+    },
+    {
+      "step": 1e-05,
+      "relative_error": 1.2471740137063097e-10,
+      "observed_order": 1.9967740118636377
+    },
+    {
+      "step": 3e-06,
+      "relative_error": 5.0147655918633106e-11,
+      "observed_order": 0.756726907484591
+    },
+    {
+      "step": 1e-06,
+      "relative_error": 8.9531717415682e-11,
+      "observed_order": -0.5275939301794058
+    }
+  ]
+}
