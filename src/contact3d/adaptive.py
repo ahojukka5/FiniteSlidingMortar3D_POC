@@ -1,4 +1,4 @@
-"""Adaptive load continuation and penalty control public API."""
+"""Adaptive load continuation, scaling, and penalty-control public API."""
 
 from .adaptive_model import (
     AdaptiveAcceptedStep,
@@ -23,6 +23,25 @@ from .load_path import (
     LoadFactorPath,
     with_coupled_boundary_data,
 )
+from .scaled_solver import (
+    ScaleAwareAugmentationIteration,
+    ScaleAwareAugmentedContactResult,
+    ScaleAwareNewtonIteration,
+    solve_scale_aware_augmented_contact,
+)
+from .scaling import (
+    ContactInterfaceScales,
+    ContactScaleIndicators,
+    CoupledProblemScales,
+    NormalizedKKTDiagnostics,
+    PenaltyControlledContactInterface,
+    PenaltyUpdateDecision,
+    PenaltyUpdatePlan,
+    ScaleAwareConvergenceOptions,
+    contact_interface_scales,
+    coupled_problem_scales,
+    propose_interface_penalties,
+)
 
 __all__ = [
     "AdaptiveAcceptedStep",
@@ -31,13 +50,28 @@ __all__ = [
     "AdaptiveContactResult",
     "AdaptiveLoadOptions",
     "AdaptivePenaltyOptions",
+    "ContactInterfaceScales",
+    "ContactScaleIndicators",
     "CoupledLoadPath",
     "CoupledPathState",
+    "CoupledProblemScales",
     "LinearBoundaryPath",
     "LinearPathValue",
     "LoadFactorPath",
+    "NormalizedKKTDiagnostics",
+    "PenaltyControlledContactInterface",
+    "PenaltyUpdateDecision",
+    "PenaltyUpdatePlan",
+    "ScaleAwareAugmentationIteration",
+    "ScaleAwareAugmentedContactResult",
+    "ScaleAwareConvergenceOptions",
+    "ScaleAwareNewtonIteration",
+    "contact_interface_scales",
     "contact_penalties",
+    "coupled_problem_scales",
+    "propose_interface_penalties",
     "solve_adaptive_contact_path",
+    "solve_scale_aware_augmented_contact",
     "with_contact_penalties",
     "with_coupled_boundary_data",
 ]

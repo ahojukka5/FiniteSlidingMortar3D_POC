@@ -69,11 +69,16 @@ Completed:
 - immutable prescribed-displacement, dead-load, and mixed continuation paths;
 - complete boundary-state rollback across cutbacks and penalty retries;
 - fixed symbolic CSR reuse when only boundary values and loads change;
-- constrained reaction vectors for every accepted path state.
+- constrained reaction vectors for every accepted path state;
+- reference bulk/interface length, pressure, force, energy, and penalty scales;
+- dimensional and normalized Newton/KKT convergence histories;
+- explicit penalty-control protocol with production and verification adapters;
+- interface-local penetration and penalty-conditioning indicators;
+- bounded interface-local penalty updates with recorded reasons;
+- unit-system invariance regression for normalized stopping and penalty decisions.
 
 Remaining:
 
-- scale-aware and local/interface-specific penalty indicators;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
 
@@ -95,6 +100,7 @@ Completed:
 - adaptive continuation controller with load cutback and penalty retries;
 - proportional and mixed boundary/load-path benchmark infrastructure;
 - separated matching-interface contact-onset benchmark harness;
+- scale-aware two-interface penalty policy and unit-conversion regression;
 - machine-readable nonlinear, coupled, and continuation histories;
 - independent constitutive, element, dense-assembly, sparse-assembly, and coupled oracles;
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
@@ -106,7 +112,6 @@ Completed:
 Remaining:
 
 - fully coupled warped nonmatching moving-overlap contact-onset benchmark;
-- scale-aware interface-local penalty control;
 - scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch convergence study;
