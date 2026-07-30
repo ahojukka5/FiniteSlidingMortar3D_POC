@@ -64,7 +64,7 @@ Completed:
 
 Remaining:
 
-- outer equilibrium/augmentation driver once global bulk equilibrium is available;
+- coupled bulk/contact equilibrium and outer augmentation driver;
 - adaptive penalty and augmentation stopping policies;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
@@ -78,16 +78,23 @@ Completed:
 - positively oriented total-Lagrangian `TET4` reference geometry;
 - analytical `TET4` internal force and consistent tangent;
 - dense multi-element `TET4` assembly for verification-sized systems;
-- independent constitutive, element, and assembled tangent oracles;
-- energy-gradient, objectivity, force-balance, and moment-balance regressions;
+- reusable symbolic CSR pattern and sparse numerical tangent assembly;
+- strong essential boundary conditions and configuration-independent nodal loads;
+- free-DOF Newton solve with Armijo residual line search;
+- monotone load stepping with warm-started predictors;
+- machine-readable nonlinear histories and explicit failure reasons;
+- independent constitutive, element, dense-assembly, and sparse-assembly oracles;
+- energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
 - 12-element cube-star affine patch test with an interior equilibrium node;
-- machine-readable JSON/CSV convergence results and an SVG tangent plot.
+- manufactured large-deformation equilibrium benchmark with line-search cutbacks;
+- JSON/CSV result tables and SVG convergence, response, and sparsity plots.
 
 Remaining:
 
-- sparse global assembly, essential boundary conditions, and external load operators;
-- adaptive Newton and globalization with line search;
-- outer equilibrium/augmentation driver;
+- coupled bulk/contact residual and tangent assembly;
+- outer equilibrium/augmentation driver with KKT stopping criteria;
+- adaptive load cutback and contact-event restart policies;
+- scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch test;
 - rotating blocks with changing overlap area;
