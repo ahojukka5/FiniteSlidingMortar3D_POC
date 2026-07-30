@@ -50,7 +50,7 @@ Remaining generalized derivatives:
 
 Topology, facet pairs, and unilateral activity are frozen during one smooth derivative evaluation. Clipping states inside a configurable event band, degenerate pallets, and singular inverse maps are rejected as outer topology events instead of receiving an arbitrary derivative.
 
-## Phase 4 — constraint enforcement — in progress
+## Phase 4 — constraint enforcement — verification path complete
 
 Completed:
 
@@ -60,12 +60,17 @@ Completed:
 - explicit separation between inner equilibrium evaluation and accepted outer augmentation;
 - analytical augmented-Lagrange tangent with multipliers and activity frozen;
 - independent centered-difference tangent oracle;
-- penalty equivalence at zero multipliers and pressure-release regressions.
+- penalty equivalence at zero multipliers and pressure-release regressions;
+- mapped mortar surfaces in global bulk-mesh DOFs;
+- combined bulk/contact residual and tangent assembly;
+- fixed-multiplier coupled Newton equilibrium;
+- outer augmented-Lagrange iteration with per-interface KKT stopping criteria;
+- explicit restart or rejection policies for facet-pair, support, and activity changes;
+- complete inner-Newton and outer-augmentation histories.
 
 Remaining:
 
-- coupled bulk/contact equilibrium and outer augmentation driver;
-- adaptive penalty and augmentation stopping policies;
+- adaptive penalty updates based on penetration and conditioning;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
 
@@ -79,6 +84,7 @@ Completed:
 - analytical `TET4` internal force and consistent tangent;
 - dense multi-element `TET4` assembly for verification-sized systems;
 - reusable symbolic CSR pattern and sparse numerical tangent assembly;
+- contact-generated cross-body blocks in the symbolic CSR pattern;
 - strong essential boundary conditions and configuration-independent nodal loads;
 - free-DOF Newton solve with Armijo residual line search;
 - monotone load stepping with warm-started predictors;
@@ -87,16 +93,15 @@ Completed:
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
 - 12-element cube-star affine patch test with an interior equilibrium node;
 - manufactured large-deformation equilibrium benchmark with line-search cutbacks;
-- JSON/CSV result tables and SVG convergence, response, and sparsity plots.
+- two-block matching-mortar coupled benchmark with Newton/KKT/pressure plots;
+- JSON/CSV result tables and SVG convergence, response, sparsity, and pressure plots.
 
 Remaining:
 
-- coupled bulk/contact residual and tangent assembly;
-- outer equilibrium/augmentation driver with KKT stopping criteria;
-- adaptive load cutback and contact-event restart policies;
+- adaptive load cutback across failed coupled increments;
 - scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
-- warped-interface contact patch test;
+- warped-interface contact patch test using the full moving-overlap adapter;
 - rotating blocks with changing overlap area;
 - cylindrical ironing;
 - rotating concentric spheres;

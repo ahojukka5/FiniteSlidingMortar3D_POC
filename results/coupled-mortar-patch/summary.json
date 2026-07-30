@@ -1,0 +1,132 @@
+{
+  "mesh": {
+    "node_count": 18,
+    "element_count": 24,
+    "total_dofs": 54,
+    "sparse_nnz": 1422
+  },
+  "contact": {
+    "penalty": 6400.0,
+    "prescribed_compression": 0.12,
+    "operator": "frozen matching Q1 standard-mortar D=M"
+  },
+  "metrics": {
+    "converged": true,
+    "termination_reason": "converged",
+    "augmentations": 6,
+    "total_newton_iterations": 15,
+    "final_residual": 1.190327951665199e-13,
+    "maximum_penetration": 1.1840367922233421e-09,
+    "contact_event_restarts": 2,
+    "minimum_jacobian": 0.9510013615490065,
+    "maximum_pressure": 28.6314654199563,
+    "interface_mean_gap": -0.0016142544628526077,
+    "directional_tangent_error": 6.492958269891141e-10,
+    "global_force_balance_norm": 6.50009937317963e-16,
+    "contact_force_balance_norm": 1.7763568394002505e-15
+  },
+  "augmentation_history": [
+    {
+      "augmentation": 0,
+      "newton_iterations": 5,
+      "contact_event_restarts": 1,
+      "equilibrium_residual": 1.3172949433801525e-13,
+      "maximum_penetration": 0.003853384407412543,
+      "maximum_complementarity": 0.0,
+      "maximum_projection_residual": 24.661660207440274,
+      "maximum_multiplier_increment": 24.661660207440274,
+      "active_rows": 4,
+      "maximum_pressure": 24.661660207440274
+    },
+    {
+      "augmentation": 1,
+      "newton_iterations": 4,
+      "contact_event_restarts": 1,
+      "equilibrium_residual": 6.744805657353365e-14,
+      "maximum_penetration": 0.0005970084487813555,
+      "maximum_complementarity": 0.0147232195048168,
+      "maximum_projection_residual": 3.8208540722006745,
+      "maximum_multiplier_increment": 3.8208540722006745,
+      "active_rows": 2,
+      "maximum_pressure": 28.48251427964095
+    },
+    {
+      "augmentation": 2,
+      "newton_iterations": 2,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 5.907868683201307e-13,
+      "maximum_penetration": 2.2400223483931562e-05,
+      "maximum_complementarity": 0.0006380146852482263,
+      "maximum_projection_residual": 0.14336143029716197,
+      "maximum_multiplier_increment": 0.14336143029716197,
+      "active_rows": 2,
+      "maximum_pressure": 28.625875709938068
+    },
+    {
+      "augmentation": 3,
+      "newton_iterations": 2,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 1.254822673083521e-13,
+      "maximum_penetration": 8.406587887963003e-07,
+      "maximum_complementarity": 2.406459400254997e-05,
+      "maximum_projection_residual": 0.0053802162482980975,
+      "maximum_multiplier_increment": 0.0053802162482980975,
+      "active_rows": 2,
+      "maximum_pressure": 28.631255926186366
+    },
+    {
+      "augmentation": 4,
+      "newton_iterations": 1,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 3.1254952021729554e-11,
+      "maximum_penetration": 3.154936480120885e-08,
+      "maximum_complementarity": 9.032979379320223e-07,
+      "maximum_projection_residual": 0.0002019159347277366,
+      "maximum_multiplier_increment": 0.0002019159347277366,
+      "active_rows": 2,
+      "maximum_pressure": 28.63145784212096
+    },
+    {
+      "augmentation": 5,
+      "newton_iterations": 1,
+      "contact_event_restarts": 0,
+      "equilibrium_residual": 1.190327951665199e-13,
+      "maximum_penetration": 1.1840367922233421e-09,
+      "maximum_complementarity": 3.3900699500062597e-08,
+      "maximum_projection_residual": 7.577835472005745e-06,
+      "maximum_multiplier_increment": 0.0,
+      "active_rows": 2,
+      "maximum_pressure": 28.6314654199563
+    }
+  ],
+  "interface_state": [
+    {
+      "node": 0,
+      "normal_gap": 1.1840367575288726e-09,
+      "pressure": 28.631465419956207,
+      "multiplier": 28.63145784212096,
+      "active": true
+    },
+    {
+      "node": 1,
+      "normal_gap": -0.0032285101097419833,
+      "pressure": 0.0,
+      "multiplier": 0.0,
+      "active": false
+    },
+    {
+      "node": 2,
+      "normal_gap": 1.1840367922233421e-09,
+      "pressure": 28.6314654199563,
+      "multiplier": 28.631457842120827,
+      "active": true
+    },
+    {
+      "node": 3,
+      "normal_gap": -0.003228510109741997,
+      "pressure": 0.0,
+      "multiplier": 0.0,
+      "active": false
+    }
+  ]
+}

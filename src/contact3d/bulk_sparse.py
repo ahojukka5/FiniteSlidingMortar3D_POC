@@ -52,17 +52,37 @@ class Tet4Sparsity:
     indptr: IntArray
     indices: IntArray
     element_positions: IntArray
+    additional_positions: tuple[IntArray, ...] = ()
 
     @classmethod
-    def from_mesh(cls, mesh: Tet4Mesh) -> Tet4Sparsity:
+    def from_mesh(
+        cls,
+        mesh: Tet4Mesh,
+        additional_dof_sets: tuple[IntArray, ...] = (),
+    ) -> Tet4Sparsity:
+        """Build the bulk pattern plus optional dense interface-local DOF blocks."""
+
         total_dofs = 3 * mesh.node_count
         symbolic = SparseAccumulator((total_dofs, total_dofs))
-        identity_block = np.ones((12, 12), dtype=float)
         dof_sets: list[IntArray] = []
         for element in mesh.elements:
             dofs = element_dofs(element)
             dof_sets.append(dofs)
-            symbolic.add_block(dofs, dofs, identity_block)
+            symbolic.add_block(dofs, dofs, np.ones((12, 12), dtype=float))
+
+        additional = tuple(
+            np.asarray(dofs, dtype=np.int64) for dofs in additional_dof_sets
+        )
+        for dofs in additional:
+            if dofs.ndim != 1 or len(dofs) == 0:
+                raise ValueError("additional DOF sets must be nonempty one-dimensional arrays")
+            if np.any(dofs < 0) or np.any(dofs >= total_dofs):
+                raise ValueError("additional DOF set contains an out-of-range index")
+            symbolic.add_block(
+                dofs,
+                dofs,
+                np.ones((len(dofs), len(dofs)), dtype=float),
+            )
         pattern = symbolic.to_csr()
 
         positions_by_row: list[dict[int, int]] = []
@@ -75,6 +95,7 @@ class Tet4Sparsity:
                     for offset, column in enumerate(pattern.indices[start:stop])
                 }
             )
+
         element_positions = np.empty((mesh.element_count, 12, 12), dtype=np.int64)
         for element_index, dofs in enumerate(dof_sets):
             for local_row, row in enumerate(dofs):
@@ -83,11 +104,21 @@ class Tet4Sparsity:
                     element_positions[element_index, local_row, local_column] = lookup[
                         int(column)
                     ]
+
+        extra_positions: list[IntArray] = []
+        for dofs in additional:
+            positions = np.empty((len(dofs), len(dofs)), dtype=np.int64)
+            for local_row, row in enumerate(dofs):
+                lookup = positions_by_row[int(row)]
+                for local_column, column in enumerate(dofs):
+                    positions[local_row, local_column] = lookup[int(column)]
+            extra_positions.append(positions)
         return cls(
             pattern.shape,
             pattern.indptr,
             pattern.indices,
             element_positions,
+            tuple(extra_positions),
         )
 
     @property

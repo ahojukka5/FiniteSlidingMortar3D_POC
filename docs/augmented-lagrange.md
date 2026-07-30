@@ -87,8 +87,22 @@ Consequently it enters both the nominal-normal term and the moving `D`/`M` force
 
 `numerical_augmented_lagrange_tangent` keeps multipliers fixed and can freeze facet pairs, active rows, and mortar weights. It is an independent centered-difference oracle for the analytical augmented tangent.
 
+## Outer coupled driver
+
+`solve_augmented_contact` now applies the projected law to complete bulk/contact boundary-value problems. Every outer iteration first converges the global displacement equilibrium with all accepted multipliers fixed. The KKT blocks are then checked on every interface. Only a failed KKT check permits the next projected multiplier update.
+
+The driver records
+
+- every fixed-multiplier Newton result;
+- contact-branch restarts inside those Newton solves;
+- penetration, complementarity, and projection maxima;
+- active-row counts and maximum pressure; and
+- the largest accepted multiplier increment.
+
+The returned multiplier tuple always corresponds to the returned equilibrium state. When the maximum augmentation count is reached, the code does not expose a projected state that has not subsequently been equilibrated.
+
 ## Nonsmooth boundary
 
 A trial pressure exactly equal to zero is an active-set event. Broad-phase changes, clipping events, zero-area pallets, singular inverse maps, and multiplier projection events remain outside one smooth derivative. The implementation does not silently switch to a numerical fallback at these states.
 
-The outer equilibrium/augmentation loop is deferred until finite-strain bulk elements and the global nonlinear solver exist. The present slice supplies the complete enforcement state transition, residual, tangent, and convergence diagnostics needed by that driver.
+The coupled Newton driver either restarts from an accepted state on the newly detected branch or rejects the branch-crossing line-search trial, according to the selected event policy. The policy moves between smooth branches; it does not assign an arbitrary derivative at the event itself.
