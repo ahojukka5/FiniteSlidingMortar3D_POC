@@ -20,15 +20,16 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - current-configuration averaged nodal normals from Appendix A;
 - analytical Appendix A nodal-normal Jacobian;
 - AABB broad-phase discovery independent of projected vertex ownership;
-- weighted mortar gaps and an area-normalized frictionless penalty residual;
+- weighted mortar gaps and area-normalized frictionless penalty enforcement;
+- projected augmented-Lagrange multiplier state and updates;
+- primal, dual, complementarity, and projection-form KKT diagnostics;
+- analytical penalty and augmented-Lagrange smooth-branch tangents;
 - force and moment balance diagnostics;
-- frozen-pair and frozen-active-set numerical tangent oracle;
-- analytical fixed-`D/M` penalty-force tangent;
-- fully analytical smooth-branch moving-mortar tangent with a retained numerical geometry oracle.
+- retained numerical operator and residual-tangent oracles.
 
-The package does **not** yet solve a complete contact boundary-value problem. Bulk finite elements, augmented-Lagrange enforcement, friction, generalized clipping-event derivatives, and dual multipliers are tracked in [the implementation plan](docs/implementation-plan.md).
+The package does **not** yet solve a complete contact boundary-value problem. Bulk finite elements, the outer equilibrium/augmentation driver, adaptive penalty control, friction, generalized clipping-event derivatives, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
 
-The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md).
+The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md).
 
 ## Development
 
