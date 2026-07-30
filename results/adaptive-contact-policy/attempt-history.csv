@@ -1,0 +1,6 @@
+attempt,start_load_factor,target_load_factor,step_size,action,inner_termination_reason,augmentations,newton_iterations,contact_event_restarts,equilibrium_residual,maximum_penetration,penalties_before,penalties_after
+1,0.0,0.8,0.8,cutback,inner_equilibrium_failed,3,12,1,0.0002,0.003,"(100.0,)","(100.0,)"
+2,0.0,0.4,0.4,penalty_increase,maximum_augmentations,3,7,0,0.0002,0.002,"(100.0,)","(400.0,)"
+3,0.0,0.4,0.4,accepted,converged,2,3,0,1e-12,4e-09,"(400.0,)","(400.0,)"
+4,0.4,0.8,0.4,accepted,converged,2,3,1,1e-12,4e-09,"(400.0,)","(400.0,)"
+5,0.8,1.0,0.19999999999999996,accepted,converged,2,3,1,1e-12,4e-09,"(400.0,)","(400.0,)"

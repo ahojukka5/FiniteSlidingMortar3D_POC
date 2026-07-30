@@ -1,5 +1,15 @@
 """Public finite-strain bulk-mechanics API."""
 
+from .adaptive import (
+    AdaptiveContactAttempt,
+    AdaptiveContactOptions,
+    AdaptiveContactResult,
+    AdaptiveLoadOptions,
+    AdaptivePenaltyOptions,
+    contact_penalties,
+    solve_adaptive_contact_path,
+    with_contact_penalties,
+)
 from .bulk_material import (
     BulkGeometryError,
     NeoHookeanMaterial,
@@ -57,6 +67,11 @@ from .tet4 import (
 )
 
 __all__ = [
+    "AdaptiveContactAttempt",
+    "AdaptiveContactOptions",
+    "AdaptiveContactResult",
+    "AdaptiveLoadOptions",
+    "AdaptivePenaltyOptions",
     "AugmentationIteration",
     "AugmentedContactOptions",
     "AugmentedContactResult",
@@ -88,6 +103,7 @@ __all__ = [
     "Tet4SparseEvaluation",
     "Tet4Sparsity",
     "assemble_tet4_sparse",
+    "contact_penalties",
     "evaluate_coupled_equilibrium",
     "evaluate_equilibrium",
     "evaluate_neo_hookean",
@@ -96,9 +112,11 @@ __all__ = [
     "numerical_neo_hookean_tangent",
     "numerical_tet4_mesh_tangent",
     "numerical_tet4_tangent",
+    "solve_adaptive_contact_path",
     "solve_augmented_contact",
     "solve_coupled_equilibrium",
     "solve_equilibrium",
     "solve_load_steps",
     "tet4_deformation_gradient",
+    "with_contact_penalties",
 ]
