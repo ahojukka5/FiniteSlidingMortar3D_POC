@@ -64,16 +64,32 @@ Completed:
 
 Remaining:
 
-- outer equilibrium/augmentation driver once bulk mechanics is available;
+- outer equilibrium/augmentation driver once global bulk equilibrium is available;
 - adaptive penalty and augmentation stopping policies;
 - optional primal-dual active-set/dual-mortar path based on Popp et al. (2010);
 - local condensation once a biorthogonal multiplier basis is introduced.
 
-## Phase 5 — three-dimensional solid mechanics and benchmarks
+## Phase 5 — three-dimensional solid mechanics and benchmarks — in progress
 
-- `TET4` and `HEX8` finite-strain neo-Hookean bulk elements;
-- adaptive Newton and line search;
-- warped-interface patch test;
+Completed:
+
+- compressible logarithmic neo-Hookean energy density;
+- analytical first Piola stress and fourth-order material tangent;
+- positively oriented total-Lagrangian `TET4` reference geometry;
+- analytical `TET4` internal force and consistent tangent;
+- dense multi-element `TET4` assembly for verification-sized systems;
+- independent constitutive, element, and assembled tangent oracles;
+- energy-gradient, objectivity, force-balance, and moment-balance regressions;
+- 12-element cube-star affine patch test with an interior equilibrium node;
+- machine-readable JSON/CSV convergence results and an SVG tangent plot.
+
+Remaining:
+
+- sparse global assembly, essential boundary conditions, and external load operators;
+- adaptive Newton and globalization with line search;
+- outer equilibrium/augmentation driver;
+- `HEX8` finite-strain neo-Hookean element and locking studies;
+- warped-interface contact patch test;
 - rotating blocks with changing overlap area;
 - cylindrical ironing;
 - rotating concentric spheres;
