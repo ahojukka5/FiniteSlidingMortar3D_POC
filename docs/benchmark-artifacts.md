@@ -48,7 +48,7 @@ silently omitted.
 ## Record schemas
 
 Specific JSON and CSV files carry independent schema names in their artifact records. The
-current core suite uses:
+current standardized suite uses:
 
 - `contact3d-tet4-patch/v1` for the affine bulk patch summary;
 - `contact3d-tangent-convergence/v1` for directional tangent studies;
@@ -62,6 +62,13 @@ current core suite uses:
 - `contact3d-adaptive-policy/v1` for the adaptive-controller summary;
 - `contact3d-adaptive-attempts/v1` for accepted, cut-back, and penalty-escalated attempts;
 - `contact3d-adaptive-accepted-steps/v1` for the committed controller path;
+- `contact3d-mixed-load-path/v1` for the deterministic mixed-boundary regression summary;
+- `contact3d-mixed-path-steps/v1` for committed mixed-boundary path states and reactions;
+- `contact3d-continuation-attempts/v1` for reusable continuation retry and update records;
+- `contact3d-mixed-contact-onset/v1` for the separated-block onset summary;
+- `contact3d-contact-path-steps/v1` for accepted contact-path pressure and reaction states;
+- `contact3d-scale-aware-penalty/v1` for the unit-invariance regression summary;
+- `contact3d-interface-penalties/v1` for dimensional and normalized penalty-update rows;
 - `contact3d-warped-adapter/v1` for the production contact summary;
 - `contact3d-contact-nodes/v1` for slave-node gap, pressure, multiplier, support, and
   activity.
@@ -95,6 +102,11 @@ The coupled mortar patch writes `deformed.vtu` with:
 - nodal reactions, external loads, and assembled contact-force vectors;
 - element body identifiers, Jacobian determinants, and strain-energy density.
 
+The mixed contact-onset benchmark writes `deformed.vtu` at the final accepted state with:
+
+- nodal reactions, effective mixed-path loads, and assembled contact forces;
+- element body identifiers, Jacobian determinants, and strain-energy density.
+
 Open these files in ParaView and color by `jacobian`, `energy_density`, or `body_id`, or apply
 a Glyph filter to the force vectors.
 
@@ -102,7 +114,7 @@ a Glyph filter to the force vectors.
 
 `write_surface_vtp` writes TRI3, QUAD4, or general polygon cells as `PolyData`.
 
-The coupled mortar patch writes:
+The coupled mortar patch and mixed contact-onset benchmark write:
 
 - `slave-contact.vtp` with normal, gap, pressure, multiplier, support, activity, and contact
   force;
@@ -169,18 +181,21 @@ Run one benchmark by repeating `--benchmark` as needed:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
-  --benchmark coupled-mortar-patch \
-  --benchmark adaptive-contact-policy \
+  --benchmark mixed-load-path \
+  --benchmark mixed-contact-onset \
   --output results/standardized-benchmarks
 ```
 
-The runner currently covers the core patch, bulk, coupled, adaptive, and production-interface
-families:
+The runner currently covers patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware,
+and production-interface families:
 
 - `tet4-patch`;
 - `nonlinear-equilibrium`;
 - `coupled-mortar-patch`;
 - `adaptive-contact-policy`;
+- `mixed-load-path`;
+- `mixed-contact-onset`;
+- `scale-aware-penalty`;
 - `warped-nonmatching-adapter`.
 
 It writes `suite-summary.json` only after every subprocess succeeds and every manifest passes
@@ -188,11 +203,11 @@ schema and file-completeness validation.
 
 ## Remaining issue-22 work
 
-The core acceptance families—patch, bulk, coupled, and adaptive—now use the common contract.
-The remaining work is:
+The patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware, and production-interface
+families now use the common contract. The remaining work is:
 
-- migrate the mixed-path, onset, scale-aware, event, BVH, and solver-scaling benchmarks;
+- migrate the warped production onset, topology-event, BVH, and solver-scaling benchmarks;
 - move repeated SVG chart implementations behind common plotting helpers;
 - add versioned KKT, event, facet-pair, and mesh-refinement row schemas;
-- export complete coupled volume/contact states from the adaptive onset benchmarks;
+- export complete coupled volume/contact states from the warped production onset benchmark;
 - add checked-in tolerance specifications for selected golden regression metrics.

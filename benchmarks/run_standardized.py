@@ -19,6 +19,9 @@ BENCHMARKS = {
     "nonlinear-equilibrium": "nonlinear_equilibrium.py",
     "coupled-mortar-patch": "coupled_mortar_patch.py",
     "adaptive-contact-policy": "adaptive_policy_regression.py",
+    "mixed-load-path": "mixed_path_regression.py",
+    "mixed-contact-onset": "mixed_contact_onset.py",
+    "scale-aware-penalty": "scale_aware_penalty_regression.py",
     "warped-nonmatching-adapter": "warped_nonmatching_adapter.py",
 }
 
@@ -54,7 +57,9 @@ def run(
             )
         manifest_path = destination / "manifest.json"
         if not manifest_path.is_file():
-            raise RuntimeError(f"standardized benchmark {name} did not write a manifest")
+            raise RuntimeError(
+                f"standardized benchmark {name} did not write a manifest"
+            )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         validate_benchmark_manifest(manifest, root=destination)
         rows.append(
