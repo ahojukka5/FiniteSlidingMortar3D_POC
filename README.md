@@ -46,6 +46,7 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - versioned benchmark manifests with Git, runtime, package, seed, and solver provenance;
 - ParaView-readable TET4 volume, contact-surface, and projected-overlap VTK output;
 - tolerance-based numeric golden regression helpers;
+- standardized patch, bulk, coupled, adaptive, and production-interface benchmark suite;
 - machine-readable patch, nonlinear, coupled, and continuation artifacts;
 - force and moment balance diagnostics;
 - retained numerical operator and residual-tangent oracles.
@@ -68,7 +69,7 @@ Install only the optional sparse runtime when development tools are not needed:
 uv sync --extra sparse
 ```
 
-Run and validate every benchmark migrated to the common artifact contract with:
+Run and validate the standardized core benchmark suite with:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
