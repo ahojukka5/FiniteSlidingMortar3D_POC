@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from xml.etree import ElementTree
@@ -18,6 +17,7 @@ from contact3d import (
     MortarContactInterface,
     build_facet_overlap,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 
 
 def interface() -> MortarContactInterface:
@@ -164,10 +164,28 @@ def write_overlap(path: Path, polygons: list[tuple[np.ndarray, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _projected_area(polygon: np.ndarray) -> float:
+    shifted = np.roll(polygon, -1, axis=0)
+    cross = polygon[:, 0] * shifted[:, 1] - shifted[:, 0] * polygon[:, 1]
+    return 0.5 * abs(float(np.sum(cross)))
+
+
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     mapped = interface()
     values = displacement()
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "warped-nonmatching-adapter",
+        seed=90317,
+        solver_settings={
+            "normal_penalty": 2400.0,
+            "search_distance": 0.2,
+            "quadrature_points": 7,
+            "directional_difference_step": 2.0e-7,
+        },
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     state = AugmentedLagrangeState.zeros(4)
     base = mapped.evaluate(values.ravel(), state, tolerance=1.0e-12)
     tangent = mapped.tangent(values.ravel(), state, base, tolerance=1.0e-12)
@@ -185,13 +203,17 @@ def run(output: Path) -> dict[str, object]:
     current_slave = mapped.pair.slave.current_nodes(values[:4])
     current_master = mapped.pair.master.current_nodes(values[4:])
     polygons: list[tuple[np.ndarray, str]] = []
+    vtk_polygons: list[tuple[np.ndarray, int, int]] = []
     for pair_index, (_, master_index) in enumerate(base.signature.facet_pairs):
         master_facet = mapped.pair.master.facets[master_index]
         overlap = build_facet_overlap(current_slave, current_master[master_facet])
         if pair_index == 0:
             polygons.append((overlap.slave_polygon, "slave QUAD4"))
+            vtk_polygons.append((overlap.slave_polygon, 0, pair_index))
         polygons.append((overlap.master_polygon, f"master TRI3 {master_index}"))
-        polygons.append((overlap.intersection, f"intersection {master_index}"))
+        polygons.append((overlap.intersection_polygon, f"intersection {master_index}"))
+        vtk_polygons.append((overlap.master_polygon, 1, pair_index))
+        vtk_polygons.append((overlap.intersection_polygon, 2, pair_index))
 
     rows = [
         {
@@ -203,12 +225,8 @@ def run(output: Path) -> dict[str, object]:
         }
         for node in range(4)
     ]
-    with (output / "interface-state.csv").open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
     summary = {
+        "schema_version": "contact3d-warped-adapter/v1",
         "geometry": {
             "slave_kind": "warped QUAD4",
             "master_kind": "two warped TRI3 facets",
@@ -228,14 +246,82 @@ def run(output: Path) -> dict[str, object]:
         },
         "interface_state": rows,
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-warped-adapter/v1",
+    )
+    artifacts.write_csv(
+        "interface-state.csv",
+        rows,
+        schema="contact3d-contact-nodes/v1",
+    )
+    artifacts.write_surface_vtp(
+        "slave-contact.vtp",
+        mapped.pair.slave.reference_nodes,
+        mapped.pair.slave.facets,
+        values[:4],
+        point_data={
+            "normal_gap": base.normal_gaps,
+            "pressure": base.pressure,
+            "supported": np.asarray(base.signature.supported_rows, dtype=np.int64),
+            "active": np.asarray(base.signature.active_rows, dtype=np.int64),
+        },
+    )
+    master_overlap = np.zeros(len(mapped.pair.master.facets), dtype=float)
+    for (_, master_index), area in zip(
+        base.signature.facet_pairs,
+        base.raw.contact.weights.overlap_areas,
+        strict=True,
+    ):
+        master_overlap[master_index] += area
+    artifacts.write_surface_vtp(
+        "master-contact.vtp",
+        mapped.pair.master.reference_nodes,
+        mapped.pair.master.facets,
+        values[4:],
+        cell_data={"overlap_area": master_overlap},
+    )
+    projected_points: list[np.ndarray] = []
+    projected_facets: list[np.ndarray] = []
+    region_kind: list[int] = []
+    pair_indices: list[int] = []
+    projected_areas: list[float] = []
+    for polygon, kind, pair_index in vtk_polygons:
+        start = len(projected_points)
+        projected_points.extend(
+            np.column_stack([polygon, np.zeros(len(polygon))])
+        )
+        projected_facets.append(np.arange(start, start + len(polygon), dtype=np.int64))
+        region_kind.append(kind)
+        pair_indices.append(pair_index)
+        projected_areas.append(_projected_area(polygon))
+    artifacts.write_surface_vtp(
+        "projected-overlap.vtp",
+        np.asarray(projected_points),
+        tuple(projected_facets),
+        cell_data={
+            "region_kind": np.asarray(region_kind, dtype=np.int64),
+            "pair_index": np.asarray(pair_indices, dtype=np.int64),
+            "projected_area": np.asarray(projected_areas),
+        },
     )
     write_pressure(output / "interface-pressure.svg", base.normal_gaps, base.pressure)
     write_overlap(output / "projected-overlap.svg", polygons)
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "interface-state.csv",
+            "slave-contact.vtp",
+            "master-contact.vtp",
+            "projected-overlap.vtp",
+            "interface-pressure.svg",
+            "projected-overlap.svg",
+        )
+    )
     return summary
 
 
