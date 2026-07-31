@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate coupled bulk/contact Newton and augmented-Lagrange artifacts."""
+
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from xml.etree import ElementTree
@@ -21,6 +21,7 @@ from contact3d import (
     Tet4Mesh,
     solve_augmented_contact,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled_oracle import FrozenMatchingMortarInterface
 from svg_plots import write_line_chart
 
@@ -135,13 +136,12 @@ def write_interface_plot(
                 (
                     f'<text x="{center:.2f}" y="{max(top+14, y-6):.2f}" '
                     f'text-anchor="middle" font-family="monospace" font-size="10">'
-                    f'p={pressure:.4g}, g={gap:.3g}</text>'
+                    f"p={pressure:.4g}, g={gap:.3g}</text>"
                 ),
             ]
         )
-    lines.append('</svg>')
-    path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-
+    lines.append("</svg>")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def solve_directional_residual(
@@ -160,6 +160,65 @@ def solve_directional_residual(
     ).residual
 
 
+def _augmentation_rows(result: AugmentedContactResult) -> list[dict[str, object]]:
+    return [
+        {
+            "augmentation": row.augmentation,
+            "newton_iterations": row.newton_iterations,
+            "contact_event_restarts": row.contact_event_restarts,
+            "equilibrium_residual": row.equilibrium_residual,
+            "maximum_penetration": row.maximum_penetration,
+            "maximum_complementarity": row.maximum_complementarity,
+            "maximum_projection_residual": row.maximum_projection_residual,
+            "maximum_multiplier_increment": row.maximum_multiplier_increment,
+            "active_rows": row.active_rows,
+            "maximum_pressure": row.maximum_pressure,
+        }
+        for row in result.history
+    ]
+
+
+def _newton_rows(result: AugmentedContactResult) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    global_iteration = 0
+    for augmentation, equilibrium in enumerate(result.equilibria, start=1):
+        for row in equilibrium.history:
+            global_iteration += 1
+            linear = row.linear_solve
+            rows.append(
+                {
+                    "augmentation": augmentation,
+                    "global_iteration": global_iteration,
+                    "iteration": row.iteration,
+                    "residual_norm": row.residual_norm,
+                    "relative_residual": row.relative_residual,
+                    "bulk_potential": row.bulk_potential,
+                    "minimum_jacobian": row.minimum_jacobian,
+                    "maximum_penetration": row.maximum_penetration,
+                    "step_norm": row.step_norm,
+                    "accepted_step": row.accepted_step,
+                    "line_search_iterations": row.line_search_iterations,
+                    "contact_branch_changed": row.contact_branch_changed,
+                    "linear_requested_backend": linear.requested_backend,
+                    "linear_backend": linear.backend,
+                    "linear_preconditioner": linear.preconditioner,
+                    "linear_converged": linear.converged,
+                    "linear_iterations": linear.iterations,
+                    "linear_residual_norm": linear.residual_norm,
+                    "linear_relative_residual": linear.relative_residual,
+                    "linear_residual_history": linear.residual_history,
+                    "linear_setup_seconds": linear.setup_seconds,
+                    "linear_solve_seconds": linear.solve_seconds,
+                    "linear_matrix_rows": linear.matrix_shape[0],
+                    "linear_matrix_columns": linear.matrix_shape[1],
+                    "linear_matrix_nnz": linear.matrix_nnz,
+                    "linear_materialized_dense": linear.materialized_dense,
+                    "linear_failure_reason": linear.failure_reason,
+                }
+            )
+    return rows
+
+
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     coupled_problem = problem()
@@ -169,31 +228,32 @@ def run(output: Path) -> dict[str, object]:
         complementarity_tolerance=1.0e-7,
         projection_tolerance=1.0e-5,
         multiplier_tolerance=1.0e-8,
-        event_policy='restart',
+        event_policy="restart",
         newton=NewtonOptions(
             maximum_iterations=40,
             absolute_tolerance=1.0e-10,
             relative_tolerance=1.0e-10,
         ),
     )
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "coupled-mortar-patch",
+        seed=8841,
+        solver_settings=options,
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     result = solve_augmented_contact(coupled_problem, options=options)
+    if not result.converged:
+        raise RuntimeError(
+            f"coupled mortar patch failed: {result.termination_reason}"
+        )
 
-    augmentation_rows = [
-        {name: getattr(row, name) for name in row.__dataclass_fields__}
-        for row in result.history
-    ]
-    newton_rows: list[dict[str, object]] = []
-    global_iteration = 0
-    for augmentation, equilibrium in enumerate(result.equilibria):
-        for row in equilibrium.history:
-            global_iteration += 1
-            values = {name: getattr(row, name) for name in row.__dataclass_fields__}
-            values['augmentation'] = augmentation
-            values['global_iteration'] = global_iteration
-            newton_rows.append(values)
-
+    augmentation_rows = _augmentation_rows(result)
+    newton_rows = _newton_rows(result)
     contact = result.equilibrium.evaluation.contacts[0]
     final_evaluation = result.equilibrium.evaluation
+    interface = coupled_problem.interfaces[0]
+
     rng = np.random.default_rng(8841)
     direction = np.zeros_like(result.displacement)
     direction[final_evaluation.free_dofs] = rng.normal(
@@ -204,10 +264,16 @@ def run(output: Path) -> dict[str, object]:
     exact_directional_tangent = final_evaluation.tangent.to_dense() @ direction
     tangent_step = 2.0e-7
     plus = solve_directional_residual(
-        coupled_problem, result, direction, tangent_step
+        coupled_problem,
+        result,
+        direction,
+        tangent_step,
     )
     minus = solve_directional_residual(
-        coupled_problem, result, direction, -tangent_step
+        coupled_problem,
+        result,
+        direction,
+        -tangent_step,
     )
     numerical_directional_tangent = (plus - minus) / (2.0 * tangent_step)
     free = final_evaluation.free_dofs
@@ -217,120 +283,231 @@ def run(output: Path) -> dict[str, object]:
         )
         / np.linalg.norm(numerical_directional_tangent[free])
     )
+
+    local_contact_force = contact.residual.reshape((-1, 3))
     interface_rows = [
         {
-            'node': node,
-            'normal_gap': float(contact.normal_gaps[node]),
-            'pressure': float(contact.pressure[node]),
-            'multiplier': float(result.states[0].multipliers[node]),
-            'active': bool(contact.signature.active_rows[node]),
+            "node": node,
+            "global_node": int(interface.slave_nodes[node]),
+            "normal_gap": float(contact.normal_gaps[node]),
+            "pressure": float(contact.pressure[node]),
+            "multiplier": float(result.states[0].multipliers[node]),
+            "supported": bool(contact.signature.supported_rows[node]),
+            "active": bool(contact.signature.active_rows[node]),
+            "contact_force_x": float(local_contact_force[node, 0]),
+            "contact_force_y": float(local_contact_force[node, 1]),
+            "contact_force_z": float(local_contact_force[node, 2]),
         }
         for node in range(len(contact.normal_gaps))
     ]
     metrics = {
-        'converged': result.converged,
-        'termination_reason': result.termination_reason,
-        'augmentations': len(result.history),
-        'total_newton_iterations': sum(row.newton_iterations for row in result.history),
-        'final_residual': result.equilibrium.evaluation.free_residual_norm,
-        'maximum_penetration': result.equilibrium.evaluation.maximum_penetration,
-        'contact_event_restarts': sum(row.contact_event_restarts for row in result.history),
-        'minimum_jacobian': result.equilibrium.evaluation.bulk.minimum_jacobian,
-        'maximum_pressure': float(np.max(contact.pressure, initial=0.0)),
-        'interface_mean_gap': float(np.mean(contact.normal_gaps)),
-        'directional_tangent_error': tangent_error,
-        'global_force_balance_norm': float(
+        "converged": result.converged,
+        "termination_reason": result.termination_reason,
+        "augmentations": len(result.history),
+        "total_newton_iterations": sum(row.newton_iterations for row in result.history),
+        "final_residual": final_evaluation.free_residual_norm,
+        "maximum_penetration": final_evaluation.maximum_penetration,
+        "contact_event_restarts": sum(
+            row.contact_event_restarts for row in result.history
+        ),
+        "minimum_jacobian": final_evaluation.bulk.minimum_jacobian,
+        "maximum_pressure": float(np.max(contact.pressure, initial=0.0)),
+        "interface_mean_gap": float(np.mean(contact.normal_gaps)),
+        "directional_tangent_error": tangent_error,
+        "global_force_balance_norm": float(
             np.linalg.norm(final_evaluation.residual.reshape((-1, 3)).sum(axis=0))
         ),
-        'contact_force_balance_norm': float(
+        "contact_force_balance_norm": float(
             np.linalg.norm(contact.residual.reshape((-1, 3)).sum(axis=0))
         ),
     }
     summary = {
-        'mesh': {
-            'node_count': coupled_problem.mesh.node_count,
-            'element_count': coupled_problem.mesh.element_count,
-            'total_dofs': 3 * coupled_problem.mesh.node_count,
-            'sparse_nnz': coupled_problem.sparsity.nnz,
+        "schema_version": "contact3d-coupled-mortar-patch/v1",
+        "mesh": {
+            "node_count": coupled_problem.mesh.node_count,
+            "element_count": coupled_problem.mesh.element_count,
+            "total_dofs": 3 * coupled_problem.mesh.node_count,
+            "free_dofs": len(final_evaluation.free_dofs),
+            "sparse_nnz": coupled_problem.sparsity.nnz,
         },
-        'contact': {
-            'penalty': coupled_problem.interfaces[0].penalty,
-            'prescribed_compression': 0.12,
-            'operator': 'frozen matching Q1 standard-mortar D=M',
+        "contact": {
+            "penalty": interface.penalty,
+            "area": interface.area,
+            "normal": interface.normal.tolist(),
+            "prescribed_compression": 0.12,
+            "operator": "frozen matching Q1 standard-mortar D=M",
         },
-        'metrics': metrics,
-        'augmentation_history': augmentation_rows,
-        'interface_state': interface_rows,
+        "metrics": metrics,
+        "augmentation_history": augmentation_rows,
+        "interface_state": interface_rows,
     }
-    (output / 'summary.json').write_text(
-        json.dumps(summary, indent=2) + '\n',
-        encoding='utf-8',
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-coupled-mortar-patch/v1",
+    )
+    artifacts.write_csv(
+        "augmentation-history.csv",
+        augmentation_rows,
+        schema="contact3d-augmentation-iterations/v1",
+    )
+    artifacts.write_csv(
+        "newton-history.csv",
+        newton_rows,
+        schema="contact3d-coupled-newton-iterations/v1",
+    )
+    artifacts.write_csv(
+        "interface-state.csv",
+        interface_rows,
+        schema="contact3d-contact-nodes/v1",
     )
 
-    with (output / 'augmentation-history.csv').open('w', newline='', encoding='utf-8') as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(augmentation_rows[0]))
-        writer.writeheader()
-        writer.writerows(augmentation_rows)
-    with (output / 'newton-history.csv').open('w', newline='', encoding='utf-8') as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(newton_rows[0]))
-        writer.writeheader()
-        writer.writerows(newton_rows)
-    with (output / 'interface-state.csv').open('w', newline='', encoding='utf-8') as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(interface_rows[0]))
-        writer.writeheader()
-        writer.writerows(interface_rows)
+    total_dofs = 3 * coupled_problem.mesh.node_count
+    reaction = np.zeros(total_dofs)
+    constrained = np.ones(total_dofs, dtype=bool)
+    constrained[final_evaluation.free_dofs] = False
+    reaction[constrained] = final_evaluation.residual[constrained]
+    global_contact_force = np.zeros(total_dofs)
+    np.add.at(global_contact_force, interface.dofs, contact.residual)
+    body_id = np.concatenate(
+        [
+            np.zeros(len(block_elements(0)), dtype=np.int64),
+            np.ones(len(block_elements(9)), dtype=np.int64),
+        ]
+    )
+    artifacts.write_tet4_vtu(
+        "deformed.vtu",
+        coupled_problem.mesh.reference_nodes,
+        coupled_problem.mesh.elements,
+        result.displacement,
+        point_data={
+            "reaction": reaction.reshape((-1, 3)),
+            "contact_force": global_contact_force.reshape((-1, 3)),
+            "external_load": coupled_problem.load.force.reshape((-1, 3)),
+        },
+        cell_data={
+            "body_id": body_id,
+            "jacobian": np.asarray(
+                [item.jacobian for item in final_evaluation.bulk.element_evaluations]
+            ),
+            "energy_density": np.asarray(
+                [
+                    item.energy_density
+                    for item in final_evaluation.bulk.element_evaluations
+                ]
+            ),
+        },
+    )
+
+    displacement_nodes = result.displacement.reshape((-1, 3))
+    slave_ids = np.asarray(interface.slave_nodes, dtype=np.int64)
+    master_ids = np.asarray(interface.master_nodes, dtype=np.int64)
+    facet = (np.arange(4, dtype=np.int64),)
+    repeated_normal = np.repeat(interface.normal[None, :], 4, axis=0)
+    artifacts.write_surface_vtp(
+        "slave-contact.vtp",
+        coupled_problem.mesh.reference_nodes[slave_ids],
+        facet,
+        displacement_nodes[slave_ids],
+        point_data={
+            "normal": repeated_normal,
+            "normal_gap": contact.normal_gaps,
+            "pressure": contact.pressure,
+            "multiplier": result.states[0].multipliers,
+            "supported": np.asarray(contact.signature.supported_rows, dtype=np.int64),
+            "active": np.asarray(contact.signature.active_rows, dtype=np.int64),
+            "contact_force": local_contact_force[:4],
+        },
+        cell_data={"interface_area": np.asarray([interface.area])},
+    )
+    artifacts.write_surface_vtp(
+        "master-contact.vtp",
+        coupled_problem.mesh.reference_nodes[master_ids],
+        facet,
+        displacement_nodes[master_ids],
+        point_data={
+            "normal": repeated_normal,
+            "contact_force": local_contact_force[4:],
+        },
+        cell_data={"interface_area": np.asarray([interface.area])},
+    )
 
     augmentation_index = np.arange(len(augmentation_rows), dtype=float)
     write_line_chart(
-        output / 'kkt-convergence.svg',
-        title='Augmented-Lagrange KKT convergence',
-        x_label='augmentation',
-        y_label='residual magnitude',
+        output / "kkt-convergence.svg",
+        title="Augmented-Lagrange KKT convergence",
+        x_label="augmentation",
+        y_label="residual magnitude",
         x_values=augmentation_index,
         series=(
             (
-                np.asarray([row['maximum_penetration'] for row in augmentation_rows]),
-                'penetration',
+                np.asarray(
+                    [row["maximum_penetration"] for row in augmentation_rows]
+                ),
+                "penetration",
             ),
             (
                 np.asarray(
-                    [row['maximum_projection_residual'] for row in augmentation_rows]
+                    [
+                        row["maximum_projection_residual"]
+                        for row in augmentation_rows
+                    ]
                 ),
-                'projection',
+                "projection",
             ),
         ),
         logarithmic_y=True,
     )
     write_line_chart(
-        output / 'newton-residual.svg',
-        title='Coupled Newton convergence across augmentations',
-        x_label='accepted Newton iteration',
-        y_label='free residual norm',
+        output / "newton-residual.svg",
+        title="Coupled Newton convergence across augmentations",
+        x_label="accepted Newton iteration",
+        y_label="free residual norm",
         x_values=np.arange(1, len(newton_rows) + 1, dtype=float),
-        series=((np.asarray([row['residual_norm'] for row in newton_rows]), 'residual'),),
+        series=(
+            (
+                np.asarray([row["residual_norm"] for row in newton_rows]),
+                "residual",
+            ),
+        ),
         logarithmic_y=True,
     )
     write_interface_plot(
-        output / 'interface-pressure.svg',
+        output / "interface-pressure.svg",
         contact.normal_gaps,
         contact.pressure,
     )
-    for path in output.glob('*.svg'):
+    for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "augmentation-history.csv",
+            "newton-history.csv",
+            "interface-state.csv",
+            "deformed.vtu",
+            "slave-contact.vtp",
+            "master-contact.vtp",
+            "kkt-convergence.svg",
+            "newton-residual.svg",
+            "interface-pressure.svg",
+        )
+    )
     return summary
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--output',
+        "--output",
         type=Path,
-        default=Path('results/coupled-mortar-patch'),
+        default=Path("results/coupled-mortar-patch"),
     )
     arguments = parser.parse_args()
     summary = run(arguments.output)
-    print(json.dumps(summary['metrics'], indent=2))
+    print(json.dumps(summary["metrics"], indent=2))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
