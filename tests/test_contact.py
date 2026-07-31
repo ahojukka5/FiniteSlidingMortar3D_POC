@@ -10,6 +10,7 @@ from contact3d import (
     evaluate_contact,
     numerical_contact_tangent,
 )
+from contact3d.surface import discover_facet_pairs_brute_force
 
 
 def _unit_quad(z: float = 0.0) -> np.ndarray:
@@ -87,6 +88,49 @@ def test_global_assembly_integrates_both_halves_of_split_master() -> None:
     assert np.sum(weights.d) == pytest.approx(1.0)
     assert np.sum(weights.m) == pytest.approx(1.0)
     assert evaluation.force_balance_norm <= 2.0e-14
+
+
+def test_bvh_and_oracle_pairs_produce_identical_contact_operators() -> None:
+    slave_nodes = _unit_quad()
+    slave = ContactSurface(slave_nodes, (np.array([0, 1, 2, 3]),))
+    master_nodes = np.array(
+        [
+            [0.0, 0.0, -0.1],
+            [0.5, 0.0, -0.1],
+            [1.0, 0.0, -0.1],
+            [0.0, 1.0, -0.1],
+            [0.5, 1.0, -0.1],
+            [1.0, 1.0, -0.1],
+        ]
+    )
+    master = ContactSurface(
+        master_nodes,
+        (np.array([0, 1, 4, 3]), np.array([1, 2, 5, 4])),
+    )
+    pair = ContactPair(slave, master, 100.0, search_distance=0.2)
+    oracle_pairs = discover_facet_pairs_brute_force(
+        slave,
+        master,
+        slave_nodes,
+        master_nodes,
+        search_distance=pair.search_distance,
+    )
+
+    default_weights = assemble_mortar_weights(pair, slave_nodes, master_nodes)
+    oracle_weights = assemble_mortar_weights(
+        pair,
+        slave_nodes,
+        master_nodes,
+        facet_pairs=oracle_pairs,
+    )
+    default_evaluation = evaluate_contact(pair)
+    oracle_evaluation = evaluate_contact(pair, facet_pairs=oracle_pairs)
+
+    assert default_weights.facet_pairs == oracle_weights.facet_pairs
+    np.testing.assert_array_equal(default_weights.overlap_areas, oracle_weights.overlap_areas)
+    np.testing.assert_array_equal(default_weights.d, oracle_weights.d)
+    np.testing.assert_array_equal(default_weights.m, oracle_weights.m)
+    np.testing.assert_array_equal(default_evaluation.residual, oracle_evaluation.residual)
 
 
 def test_numerical_tangent_has_common_translation_nullspace() -> None:
