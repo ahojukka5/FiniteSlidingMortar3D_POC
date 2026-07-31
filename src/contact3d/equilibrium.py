@@ -9,6 +9,11 @@ import numpy as np
 
 from .bulk_material import BulkGeometryError, NeoHookeanMaterial
 from .bulk_sparse import Tet4SparseEvaluation, Tet4Sparsity, assemble_tet4_sparse
+from .linear_solver import (
+    LinearSolveDiagnostics,
+    LinearSolverOptions,
+    solve_reduced_system,
+)
 from .model import FloatArray, IntArray
 from .tet4 import Tet4Mesh
 
@@ -133,6 +138,7 @@ class NewtonOptions:
     line_search_reduction: float = 0.5
     minimum_step: float = 2.0**-20
     maximum_line_search_iterations: int = 24
+    linear_solver: LinearSolverOptions = field(default_factory=LinearSolverOptions)
 
     def __post_init__(self) -> None:
         if self.maximum_iterations <= 0:
@@ -163,6 +169,7 @@ class NewtonIteration:
     step_norm: float
     accepted_step: float
     line_search_iterations: int
+    linear_solve: LinearSolveDiagnostics
 
 
 TerminationReason = Literal[
@@ -170,6 +177,7 @@ TerminationReason = Literal[
     "maximum_iterations",
     "line_search_failed",
     "singular_tangent",
+    "linear_solve_failed",
 ]
 
 
@@ -181,6 +189,7 @@ class NewtonResult:
     termination_reason: TerminationReason
     evaluation: EquilibriumEvaluation
     history: tuple[NewtonIteration, ...]
+    linear_solve_failure: LinearSolveDiagnostics | None = None
 
     @property
     def iteration_count(self) -> int:
@@ -233,6 +242,14 @@ def _relative_residual(norm: float, initial_norm: float) -> float:
     return norm / max(initial_norm, np.finfo(float).tiny)
 
 
+def _linear_failure_reason(
+    diagnostics: LinearSolveDiagnostics,
+) -> TerminationReason:
+    if diagnostics.failure_reason in {"singular_matrix", "factorization_failed"}:
+        return "singular_tangent"
+    return "linear_solve_failed"
+
+
 def solve_equilibrium(
     problem: EquilibriumProblem,
     initial_displacement: FloatArray | None = None,
@@ -270,19 +287,23 @@ def solve_equilibrium(
 
     for iteration in range(settings.maximum_iterations):
         free = evaluation.free_dofs
-        tangent = evaluation.bulk.tangent.extract_dense(free, free)
-        residual = evaluation.residual[free]
-        try:
-            step_free = np.linalg.solve(tangent, -residual)
-        except np.linalg.LinAlgError:
+        linear_result = solve_reduced_system(
+            evaluation.bulk.tangent,
+            free,
+            -evaluation.residual[free],
+            options=settings.linear_solver,
+        )
+        if linear_result.solution is None:
             return NewtonResult(
                 displacement,
                 load_factor,
                 False,
-                "singular_tangent",
+                _linear_failure_reason(linear_result.diagnostics),
                 evaluation,
                 tuple(history),
+                linear_result.diagnostics,
             )
+        step_free = linear_result.solution
         step = np.zeros(total_dofs, dtype=float)
         step[free] = step_free
         step_norm = float(np.linalg.norm(step_free))
@@ -338,6 +359,7 @@ def solve_equilibrium(
                 step_norm=step_norm,
                 accepted_step=alpha,
                 line_search_iterations=line_iteration,
+                linear_solve=linear_result.diagnostics,
             )
         )
         if evaluation.free_residual_norm <= threshold:
