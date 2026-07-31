@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import SimpleNamespace
 from xml.etree import ElementTree
@@ -22,6 +21,7 @@ from contact3d.adaptive import (
     contact_penalties,
     solve_adaptive_contact_path,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled import AugmentedContactOptions
 from contact3d.enforcement_state import AugmentedLagrangeState
 from contact3d.equilibrium import DeadLoad, DirichletConstraints
@@ -40,6 +40,16 @@ class Pair:
 @dataclass(frozen=True, slots=True)
 class Interface:
     pair: Pair
+
+    @property
+    def normal_penalty(self) -> float:
+        return self.pair.normal_penalty
+
+    def with_normal_penalty(self, normal_penalty: float) -> Interface:
+        return replace(self, pair=replace(self.pair, normal_penalty=normal_penalty))
+
+    def reference_tributary_areas(self) -> np.ndarray:
+        return np.ones(1)
 
     def initial_state(self) -> AugmentedLagrangeState:
         return AugmentedLagrangeState.zeros(1)
@@ -141,13 +151,6 @@ def _solver(problem, displacement, states, *, load_factor, options, tolerance):
     return _result(parameter, 10.0 + parameter, converged=True)
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def _write_chart(
     path: Path,
     *,
@@ -179,7 +182,10 @@ def _write_chart(
             f'<text x="{width/2}" y="25" text-anchor="middle" '
             f'font-family="sans-serif" font-size="16">{title}</text>'
         ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
+        (
+            f'<line x1="{left}" y1="{top}" x2="{left}" '
+            f'y2="{height-bottom}" stroke="black"/>'
+        ),
         (
             f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
             f'y2="{height-bottom}" stroke="black"/>'
@@ -219,6 +225,13 @@ def run(output: Path) -> dict[str, object]:
         penalty=AdaptivePenaltyOptions(enabled=False),
         augmented=AugmentedContactOptions(maximum_augmentations=3),
     )
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "mixed-load-path",
+        seed=0,
+        solver_settings={"path": path, "adaptive": options},
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     result = solve_adaptive_contact_path(
         problem,
         1.0,
@@ -230,10 +243,11 @@ def run(output: Path) -> dict[str, object]:
         raise RuntimeError(result.termination_reason)
 
     step_rows: list[dict[str, object]] = []
-    for step in result.accepted_steps:
+    for index, step in enumerate(result.accepted_steps, start=1):
         reaction = step.reaction.reshape((-1, 3)).sum(axis=0)
         step_rows.append(
             {
+                "accepted_step": index,
                 "parameter": step.parameter,
                 "tool_z": step.path_state.value("tool_z"),
                 "tool_x": step.path_state.value("tool_x"),
@@ -242,6 +256,7 @@ def run(output: Path) -> dict[str, object]:
                 "reaction_x": float(reaction[0]),
                 "reaction_y": float(reaction[1]),
                 "reaction_z": float(reaction[2]),
+                "reaction_norm": step.reaction_norm,
                 "state_multiplier": float(step.result.states[0].multipliers[0]),
             }
         )
@@ -250,40 +265,68 @@ def run(output: Path) -> dict[str, object]:
             "attempt": item.attempt,
             "start_parameter": item.start_load_factor,
             "target_parameter": item.target_load_factor,
+            "step_size": item.step_size,
             "action": item.action,
-            "prescribed_values": ";".join(f"{value:.12g}" for value in item.prescribed_values),
+            "inner_termination_reason": item.inner_termination_reason,
+            "augmentations": item.augmentations,
+            "newton_iterations": item.newton_iterations,
+            "contact_event_restarts": item.contact_event_restarts,
+            "equilibrium_residual": item.equilibrium_residual,
+            "maximum_penetration": item.maximum_penetration,
             "effective_load_norm": item.effective_load_norm,
             "reaction_norm": item.reaction_norm,
-            "inner_termination_reason": item.inner_termination_reason,
+            "penalties_before": item.penalties_before,
+            "penalties_after": item.penalties_after,
+            "prescribed_values": item.prescribed_values,
+            "penalty_update_reasons": item.penalty_update_reasons,
         }
         for item in result.attempts
     ]
-    _write_csv(output / "accepted-steps.csv", step_rows)
-    _write_csv(output / "attempt-history.csv", attempt_rows)
 
+    metrics = {
+        "converged": result.converged,
+        "termination_reason": result.termination_reason,
+        "accepted_steps": result.accepted_step_count,
+        "cutbacks": result.cutback_count,
+        "attempts": len(result.attempts),
+        "final_parameter": result.load_factor,
+        "final_tool_z": step_rows[-1]["tool_z"],
+        "final_tool_x": step_rows[-1]["tool_x"],
+        "final_effective_load_norm": step_rows[-1]["effective_load_norm"],
+        "final_reaction_norm": result.accepted_steps[-1].reaction_norm,
+        "sparsity_reused": all(
+            step.path_state.problem.sparsity is problem.sparsity
+            for step in result.accepted_steps
+        ),
+    }
     summary = {
-        "metrics": {
-            "converged": result.converged,
-            "accepted_steps": result.accepted_step_count,
-            "cutbacks": result.cutback_count,
-            "attempts": len(result.attempts),
-            "final_parameter": result.load_factor,
-            "final_tool_z": step_rows[-1]["tool_z"],
-            "final_tool_x": step_rows[-1]["tool_x"],
-            "final_effective_load_norm": step_rows[-1]["effective_load_norm"],
-            "final_reaction_norm": result.accepted_steps[-1].reaction_norm,
-            "sparsity_reused": all(
-                step.path_state.problem.sparsity is problem.sparsity
-                for step in result.accepted_steps
-            ),
+        "schema_version": "contact3d-mixed-load-path/v1",
+        "path": {
+            "type": "linear proportional mixed boundary/load path",
+            "values": [
+                {"name": value.name, "start": value.start, "end": value.end}
+                for value in path.values
+            ],
         },
+        "metrics": metrics,
         "accepted_steps": step_rows,
         "attempts": attempt_rows,
         "penalties": contact_penalties(result.problem),
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-mixed-load-path/v1",
+    )
+    artifacts.write_csv(
+        "accepted-steps.csv",
+        step_rows,
+        schema="contact3d-mixed-path-steps/v1",
+    )
+    artifacts.write_csv(
+        "attempt-history.csv",
+        attempt_rows,
+        schema="contact3d-continuation-attempts/v1",
     )
 
     parameter = np.asarray([float(row["parameter"]) for row in step_rows])
@@ -311,6 +354,16 @@ def run(output: Path) -> dict[str, object]:
     )
     for svg in output.glob("*.svg"):
         ElementTree.parse(svg)
+        artifacts.register(svg.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "accepted-steps.csv",
+            "attempt-history.csv",
+            "boundary-path.svg",
+            "reaction-path.svg",
+        )
+    )
     return summary
 
 
