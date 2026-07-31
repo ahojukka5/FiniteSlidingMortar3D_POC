@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
+from .broad_phase import (
+    BroadPhaseDiagnostics,
+    FacetAABBTree,
+    FacetPair,
+    FacetPairSearchResult,
+    facet_aabbs,
+)
 from .model import FloatArray, IntArray
-
-FacetPair = tuple[int, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +23,7 @@ class ContactSurface:
     reference_nodes: FloatArray
     facets: tuple[IntArray, ...]
     normal_sign: float = 1.0
+    _broad_phase_tree: FacetAABBTree = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         nodes = np.asarray(self.reference_nodes, dtype=float)
@@ -37,12 +43,25 @@ class ContactSurface:
                 raise ValueError("surface facet contains duplicate nodes")
             if np.any(facet < 0) or np.any(facet >= len(nodes)):
                 raise ValueError("surface facet node index is out of range")
-        object.__setattr__(self, "reference_nodes", nodes.copy())
-        object.__setattr__(self, "facets", facets)
+        copied_nodes = nodes.copy()
+        copied_facets = tuple(facet.copy() for facet in facets)
+        object.__setattr__(self, "reference_nodes", copied_nodes)
+        object.__setattr__(self, "facets", copied_facets)
+        object.__setattr__(
+            self,
+            "_broad_phase_tree",
+            FacetAABBTree.build(copied_nodes, copied_facets),
+        )
 
     @property
     def node_count(self) -> int:
         return len(self.reference_nodes)
+
+    @property
+    def broad_phase_tree(self) -> FacetAABBTree:
+        """Return the immutable reference-topology facet BVH."""
+
+        return self._broad_phase_tree
 
     def current_nodes(self, displacement: FloatArray | None = None) -> FloatArray:
         """Return current coordinates after validating an optional displacement."""
@@ -201,13 +220,54 @@ def averaged_nodal_normal_jacobian(
     return jacobian
 
 
-def _aabb_distance(first: FloatArray, second: FloatArray) -> float:
-    first_min = np.min(first, axis=0)
-    first_max = np.max(first, axis=0)
-    second_min = np.min(second, axis=0)
-    second_max = np.max(second, axis=0)
-    separation = np.maximum(np.maximum(first_min - second_max, second_min - first_max), 0.0)
-    return float(np.linalg.norm(separation))
+def _validate_pair_search(
+    slave: ContactSurface,
+    master: ContactSurface,
+    slave_nodes: FloatArray,
+    master_nodes: FloatArray,
+    search_distance: float,
+) -> tuple[FloatArray, FloatArray]:
+    if not np.isfinite(search_distance) or search_distance <= 0.0:
+        raise ValueError("search_distance must be finite and positive")
+    slave_values = np.asarray(slave_nodes, dtype=float)
+    master_values = np.asarray(master_nodes, dtype=float)
+    if slave_values.shape != slave.reference_nodes.shape:
+        raise ValueError("slave coordinates must match the slave surface")
+    if master_values.shape != master.reference_nodes.shape:
+        raise ValueError("master coordinates must match the master surface")
+    if not np.all(np.isfinite(slave_values)) or not np.all(np.isfinite(master_values)):
+        raise ValueError("contact coordinates must be finite")
+    return slave_values, master_values
+
+
+def discover_facet_pairs_with_diagnostics(
+    slave: ContactSurface,
+    master: ContactSurface,
+    slave_nodes: FloatArray,
+    master_nodes: FloatArray,
+    *,
+    search_distance: float,
+) -> FacetPairSearchResult:
+    """Query the cached master BVH and return pairs plus operation diagnostics."""
+
+    slave_values, master_values = _validate_pair_search(
+        slave,
+        master,
+        slave_nodes,
+        master_nodes,
+        search_distance,
+    )
+    slave_minimums, slave_maximums = facet_aabbs(
+        slave_values,
+        slave.facets,
+        node_count=slave.node_count,
+    )
+    master_tree = master.broad_phase_tree.refit(master_values)
+    return master_tree.query(
+        slave_minimums,
+        slave_maximums,
+        search_distance=search_distance,
+    )
 
 
 def discover_facet_pairs(
@@ -220,18 +280,66 @@ def discover_facet_pairs(
 ) -> tuple[FacetPair, ...]:
     """Return every facet pair whose current AABBs are within the search band."""
 
-    if search_distance <= 0.0:
-        raise ValueError("search_distance must be positive")
-    if np.asarray(slave_nodes).shape != slave.reference_nodes.shape:
-        raise ValueError("slave coordinates must match the slave surface")
-    if np.asarray(master_nodes).shape != master.reference_nodes.shape:
-        raise ValueError("master coordinates must match the master surface")
+    return discover_facet_pairs_with_diagnostics(
+        slave,
+        master,
+        slave_nodes,
+        master_nodes,
+        search_distance=search_distance,
+    ).pairs
 
+
+def discover_facet_pairs_brute_force(
+    slave: ContactSurface,
+    master: ContactSurface,
+    slave_nodes: FloatArray,
+    master_nodes: FloatArray,
+    *,
+    search_distance: float,
+) -> tuple[FacetPair, ...]:
+    """Return the quadratic broad-phase oracle used to verify the BVH."""
+
+    slave_values, master_values = _validate_pair_search(
+        slave,
+        master,
+        slave_nodes,
+        master_nodes,
+        search_distance,
+    )
+    slave_minimums, slave_maximums = facet_aabbs(
+        slave_values,
+        slave.facets,
+        node_count=slave.node_count,
+    )
+    master_minimums, master_maximums = facet_aabbs(
+        master_values,
+        master.facets,
+        node_count=master.node_count,
+    )
     pairs: list[FacetPair] = []
-    for slave_index, slave_facet in enumerate(slave.facets):
-        slave_points = slave_nodes[slave_facet]
-        for master_index, master_facet in enumerate(master.facets):
-            master_points = master_nodes[master_facet]
-            if _aabb_distance(slave_points, master_points) <= search_distance:
+    for slave_index in range(len(slave.facets)):
+        for master_index in range(len(master.facets)):
+            separation = np.maximum(
+                np.maximum(
+                    slave_minimums[slave_index] - master_maximums[master_index],
+                    master_minimums[master_index] - slave_maximums[slave_index],
+                ),
+                0.0,
+            )
+            if float(np.linalg.norm(separation)) <= search_distance:
                 pairs.append((slave_index, master_index))
     return tuple(pairs)
+
+
+__all__ = [
+    "BroadPhaseDiagnostics",
+    "ContactSurface",
+    "FacetAABBTree",
+    "FacetPair",
+    "FacetPairSearchResult",
+    "averaged_nodal_normal_jacobian",
+    "averaged_nodal_normals",
+    "discover_facet_pairs",
+    "discover_facet_pairs_brute_force",
+    "discover_facet_pairs_with_diagnostics",
+]
