@@ -15,7 +15,10 @@ from contact3d.benchmark_artifacts import (
 )
 
 BENCHMARKS = {
+    "tet4-patch": "tet4_patch.py",
     "nonlinear-equilibrium": "nonlinear_equilibrium.py",
+    "coupled-mortar-patch": "coupled_mortar_patch.py",
+    "adaptive-contact-policy": "adaptive_policy_regression.py",
     "warped-nonmatching-adapter": "warped_nonmatching_adapter.py",
 }
 
