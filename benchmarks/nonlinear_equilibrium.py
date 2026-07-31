@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from xml.etree import ElementTree
@@ -24,6 +23,7 @@ from contact3d import (
     solve_equilibrium,
     solve_load_steps,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 
 
 def cube_star_mesh() -> Tet4Mesh:
@@ -74,13 +74,6 @@ def manufactured_problem() -> tuple[EquilibriumProblem, np.ndarray, np.ndarray]:
     return problem, target, deformation
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     problem, target, deformation = manufactured_problem()
@@ -88,6 +81,13 @@ def run(output: Path) -> dict[str, object]:
         maximum_iterations=30,
         absolute_tolerance=1.0e-11,
         relative_tolerance=1.0e-11,
+    )
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "nonlinear-equilibrium",
+        seed=0,
+        solver_settings=options,
+        repo_root=Path(__file__).resolve().parents[1],
     )
     free_dofs = problem.constraints.free_dofs(3 * problem.mesh.node_count)
     initial_norm = float(np.linalg.norm(problem.load.force[free_dofs]))
@@ -110,6 +110,15 @@ def run(output: Path) -> dict[str, object]:
             "step_norm": item.step_norm,
             "accepted_step": item.accepted_step,
             "line_search_iterations": item.line_search_iterations,
+            "linear_backend": item.linear_solve.backend,
+            "linear_preconditioner": item.linear_solve.preconditioner,
+            "linear_iterations": item.linear_solve.iterations,
+            "linear_residual_norm": item.linear_solve.residual_norm,
+            "linear_relative_residual": item.linear_solve.relative_residual,
+            "linear_setup_seconds": item.linear_solve.setup_seconds,
+            "linear_solve_seconds": item.linear_solve.solve_seconds,
+            "linear_matrix_nnz": item.linear_solve.matrix_nnz,
+            "linear_materialized_dense": item.linear_solve.materialized_dense,
         }
         for item in direct.history
     ]
@@ -136,6 +145,7 @@ def run(output: Path) -> dict[str, object]:
     reaction = np.sum(direct.evaluation.reaction.reshape((-1, 3)), axis=0)
     external = np.sum(problem.load.force.reshape((-1, 3)), axis=0)
     summary = {
+        "schema_version": "contact3d-nonlinear-equilibrium/v1",
         "mesh": {
             "node_count": problem.mesh.node_count,
             "element_count": problem.mesh.element_count,
@@ -167,12 +177,39 @@ def run(output: Path) -> dict[str, object]:
         "load_steps": step_rows,
         "newton_history": history_rows,
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-nonlinear-equilibrium/v1",
     )
-    _write_csv(output / "newton-history.csv", history_rows)
-    _write_csv(output / "load-steps.csv", step_rows)
+    artifacts.write_csv(
+        "newton-history.csv",
+        history_rows,
+        schema="contact3d-newton-iterations/v1",
+    )
+    artifacts.write_csv(
+        "load-steps.csv",
+        step_rows,
+        schema="contact3d-load-steps/v1",
+    )
+    artifacts.write_tet4_vtu(
+        "deformed.vtu",
+        problem.mesh.reference_nodes,
+        problem.mesh.elements,
+        direct.displacement,
+        point_data={
+            "reaction": direct.evaluation.reaction.reshape((-1, 3)),
+            "external_load": problem.load.force.reshape((-1, 3)),
+        },
+        cell_data={
+            "jacobian": np.array(
+                [item.jacobian for item in direct.evaluation.bulk.element_evaluations]
+            ),
+            "energy_density": np.array(
+                [item.energy_density for item in direct.evaluation.bulk.element_evaluations]
+            ),
+        },
+    )
     residual_x = np.array([0.0, *[float(row["iteration"]) for row in history_rows]])
     residual_y = np.array(
         [initial_norm, *[float(row["residual_norm"]) for row in history_rows]]
@@ -201,6 +238,18 @@ def run(output: Path) -> dict[str, object]:
     write_sparsity(problem, output / "sparsity-pattern.svg")
     for svg in output.glob("*.svg"):
         ElementTree.parse(svg)
+        artifacts.register(svg.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "newton-history.csv",
+            "load-steps.csv",
+            "deformed.vtu",
+            "newton-residual.svg",
+            "load-displacement.svg",
+            "sparsity-pattern.svg",
+        )
+    )
     return summary
 
 
