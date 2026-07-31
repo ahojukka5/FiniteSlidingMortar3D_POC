@@ -100,7 +100,10 @@ Completed:
 - adaptive continuation controller with load cutback and penalty retries;
 - proportional and mixed boundary/load-path benchmark infrastructure;
 - separated matching-interface contact-onset benchmark harness;
+- scale-aware interface-local penalty control;
 - scale-aware two-interface penalty policy and unit-conversion regression;
+- production warped nonmatching moving-overlap contact-onset benchmark harness;
+- deterministic separated, first-contact, and established-contact tangent checks;
 - machine-readable nonlinear, coupled, and continuation histories;
 - independent constitutive, element, dense-assembly, sparse-assembly, and coupled oracles;
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
@@ -111,7 +114,7 @@ Completed:
 
 Remaining:
 
-- fully coupled warped nonmatching moving-overlap contact-onset benchmark;
+- execute and commit the warped nonmatching contact-onset reference result set;
 - scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch convergence study;
