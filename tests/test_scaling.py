@@ -21,6 +21,7 @@ from contact3d.scaling import (
 @dataclass(frozen=True, slots=True)
 class Mesh:
     reference_nodes: np.ndarray
+
     @property
     def node_count(self):
         return len(self.reference_nodes)
@@ -295,10 +296,15 @@ def test_production_mortar_adapter_uses_reference_tributary_area() -> None:
         reference_nodes: np.ndarray
         facets: tuple[np.ndarray, ...]
 
+        @property
+        def node_count(self) -> int:
+            return len(self.reference_nodes)
+
     @dataclass(frozen=True, slots=True)
     class Pair:
         normal_penalty: float
         slave: Surface
+        master: Surface
 
     surface = Surface(
         np.array(
@@ -312,7 +318,7 @@ def test_production_mortar_adapter_uses_reference_tributary_area() -> None:
         (np.array([0, 1, 2, 3]),),
     )
     interface = MortarContactInterface(
-        Pair(100.0, surface),
+        Pair(100.0, surface, surface),
         np.arange(4),
         np.arange(4, 8),
     )
