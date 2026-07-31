@@ -11,8 +11,10 @@ from .coupled import (
     CoupledEquilibriumProblem,
     CoupledNewtonIteration,
     CoupledTerminationReason,
+    _linear_failure_reason,
     evaluate_coupled_equilibrium,
 )
+from .enforcement_state import AugmentedLagrangeState
 from .equilibrium import NewtonOptions
 from .event_geometry import (
     _RECOVERABLE_ERRORS,
@@ -21,8 +23,8 @@ from .event_geometry import (
     _relative_residual,
     _validated_states,
 )
-from .enforcement_state import AugmentedLagrangeState
 from .event_model import EventAwareCoupledNewtonResult
+from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
 from .model import FloatArray
 from .topology_events import (
     ContactTopologyEventBatch,
@@ -40,6 +42,7 @@ def _result(
     evaluation: CoupledEquilibriumEvaluation,
     history: list[CoupledNewtonIteration],
     events: list[ContactTopologyEventBatch],
+    linear_solve_failure: LinearSolveDiagnostics | None = None,
 ) -> EventAwareCoupledNewtonResult:
     return EventAwareCoupledNewtonResult(
         displacement.copy(),
@@ -49,6 +52,7 @@ def _result(
         evaluation,
         tuple(history),
         tuple(events),
+        linear_solve_failure,
     )
 
 
@@ -127,19 +131,24 @@ def solve_event_aware_coupled_equilibrium(
     for iteration in range(settings.maximum_iterations):
         free = evaluation.free_dofs
         assert evaluation.tangent is not None
-        tangent = evaluation.tangent.extract_dense(free, free)
-        try:
-            step_free = np.linalg.solve(tangent, -evaluation.residual[free])
-        except np.linalg.LinAlgError:
+        linear_result = solve_reduced_system(
+            evaluation.tangent,
+            free,
+            -evaluation.residual[free],
+            options=settings.linear_solver,
+        )
+        if linear_result.solution is None:
             return _result(
                 displacement,
                 load_factor,
                 False,
-                "singular_tangent",
+                _linear_failure_reason(linear_result.diagnostics),
                 evaluation,
                 history,
                 events,
+                linear_result.diagnostics,
             )
+        step_free = linear_result.solution
         step = np.zeros(total_dofs, dtype=float)
         step[free] = step_free
         merit = 0.5 * evaluation.free_residual_norm**2
@@ -253,6 +262,7 @@ def solve_event_aware_coupled_equilibrium(
                 accepted_step=accepted_alpha,
                 line_search_iterations=line_iteration,
                 contact_branch_changed=branch_changed,
+                linear_solve=linear_result.diagnostics,
             )
         )
         if evaluation.free_residual_norm <= threshold:
@@ -274,5 +284,3 @@ def solve_event_aware_coupled_equilibrium(
         history,
         events,
     )
-
-

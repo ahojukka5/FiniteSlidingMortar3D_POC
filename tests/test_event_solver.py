@@ -8,6 +8,7 @@ import pytest
 
 from contact3d.clipping import ClippingTopologyError
 from contact3d.event_solver import solve_event_aware_coupled_equilibrium
+from contact3d.sparse import CSRMatrix
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,13 +16,6 @@ class Signature:
     facet_pairs: tuple[tuple[int, int], ...]
     active_rows: tuple[bool, ...]
     supported_rows: tuple[bool, ...]
-
-
-class DenseTangent:
-    def extract_dense(self, rows, columns):
-        assert np.array_equal(rows, np.array([0]))
-        assert np.array_equal(columns, np.array([0]))
-        return np.ones((1, 1))
 
 
 class Constraints:
@@ -45,13 +39,19 @@ def fake_evaluation(value: float, *, tangent: bool = True):
     if 0.48 <= value <= 0.52:
         raise ClippingTopologyError("synthetic clipping coincidence")
     residual = np.array([value - 1.0, 0.0, 0.0])
+    matrix = CSRMatrix(
+        (1, 1),
+        np.array([0, 1], dtype=np.int64),
+        np.array([0], dtype=np.int64),
+        np.ones(1),
+    )
     return SimpleNamespace(
         displacement=np.array([value, 0.0, 0.0]),
         signatures=(branch,),
         contacts=(SimpleNamespace(signature=branch),),
         residual=residual,
         free_dofs=np.array([0]),
-        tangent=DenseTangent() if tangent else None,
+        tangent=matrix if tangent else None,
         free_residual_norm=abs(value - 1.0),
         bulk_potential=0.5 * (value - 1.0) ** 2,
         bulk=SimpleNamespace(minimum_jacobian=1.0),
@@ -85,6 +85,8 @@ def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
         "pressure_activation",
     }
     assert any(iteration.contact_branch_changed for iteration in result.history)
+    assert all(row.linear_solve.backend == "dense" for row in result.history)
+    assert all(row.linear_solve.materialized_dense for row in result.history)
 
 
 def test_production_geometry_signature_records_polygon_and_pallet_counts(monkeypatch) -> None:

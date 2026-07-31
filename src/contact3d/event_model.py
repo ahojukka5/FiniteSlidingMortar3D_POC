@@ -12,6 +12,7 @@ from .coupled import (
     CoupledTerminationReason,
 )
 from .enforcement_state import AugmentedLagrangeState
+from .linear_solver import LinearSolveDiagnostics
 from .model import FloatArray
 from .topology_events import ContactTopologyEventBatch
 
@@ -27,6 +28,7 @@ class EventAwareCoupledNewtonResult:
     evaluation: CoupledEquilibriumEvaluation
     history: tuple[CoupledNewtonIteration, ...]
     events: tuple[ContactTopologyEventBatch, ...]
+    linear_solve_failure: LinearSolveDiagnostics | None = None
 
     @property
     def iteration_count(self) -> int:
@@ -47,6 +49,7 @@ class EventAwareCoupledNewtonResult:
             self.evaluation,
             self.history,
             self.contact_event_restarts,
+            self.linear_solve_failure,
         )
 
 
