@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import SimpleNamespace
 from xml.etree import ElementTree
@@ -20,6 +19,7 @@ from contact3d.adaptive import (
     contact_penalties,
     solve_adaptive_contact_path,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled import AugmentedContactOptions, AugmentedContactResult
 from contact3d.enforcement_state import AugmentedLagrangeState
 from svg_plots import write_line_chart
@@ -38,6 +38,19 @@ class Pair:
 @dataclass(frozen=True, slots=True)
 class Interface:
     pair: Pair
+
+    @property
+    def normal_penalty(self) -> float:
+        return self.pair.normal_penalty
+
+    def with_normal_penalty(self, normal_penalty: float) -> Interface:
+        return replace(
+            self,
+            pair=replace(self.pair, normal_penalty=normal_penalty),
+        )
+
+    def reference_tributary_areas(self) -> np.ndarray:
+        return np.ones(1)
 
     def initial_state(self) -> AugmentedLagrangeState:
         return AugmentedLagrangeState.zeros(1)
@@ -93,7 +106,16 @@ def make_result(
     )
 
 
-def scripted_solver(problem, displacement, states, *, load_factor, options, tolerance):
+def scripted_solver(
+    problem,
+    displacement,
+    states,
+    *,
+    load_factor,
+    options,
+    tolerance,
+):
+    del displacement, options, tolerance
     penalty = contact_penalties(problem)[0]
     state_value = float(states[0].multipliers[0])
     if np.isclose(load_factor, 0.8) and np.isclose(penalty, 100.0):
@@ -127,11 +149,43 @@ def scripted_solver(problem, displacement, states, *, load_factor, options, tole
     )
 
 
-def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
+def _attempt_rows(result) -> list[dict[str, object]]:
+    return [
+        {
+            "attempt": attempt.attempt,
+            "start_load_factor": attempt.start_load_factor,
+            "target_load_factor": attempt.target_load_factor,
+            "step_size": attempt.step_size,
+            "action": attempt.action,
+            "inner_termination_reason": attempt.inner_termination_reason,
+            "augmentations": attempt.augmentations,
+            "newton_iterations": attempt.newton_iterations,
+            "contact_event_restarts": attempt.contact_event_restarts,
+            "equilibrium_residual": attempt.equilibrium_residual,
+            "maximum_penetration": attempt.maximum_penetration,
+            "penalties_before": attempt.penalties_before,
+            "penalties_after": attempt.penalties_after,
+            "path_values": attempt.path_values,
+            "prescribed_dofs": attempt.prescribed_dofs,
+            "prescribed_values": attempt.prescribed_values,
+            "effective_load_norm": attempt.effective_load_norm,
+            "reaction_norm": attempt.reaction_norm,
+            "normalized_equilibrium_residual": (
+                attempt.normalized_equilibrium_residual
+            ),
+            "normalized_maximum_penetration": (
+                attempt.normalized_maximum_penetration
+            ),
+            "interface_penetrations": attempt.interface_penetrations,
+            "normalized_interface_penetrations": (
+                attempt.normalized_interface_penetrations
+            ),
+            "penalty_ratios_before": attempt.penalty_ratios_before,
+            "penalty_ratios_after": attempt.penalty_ratios_after,
+            "penalty_update_reasons": attempt.penalty_update_reasons,
+        }
+        for attempt in result.attempts
+    ]
 
 
 def run(output: Path) -> dict[str, object]:
@@ -149,7 +203,17 @@ def run(output: Path) -> dict[str, object]:
             maximum_penalty=1600.0,
             maximum_updates_per_step=2,
         ),
-        augmented=AugmentedContactOptions(maximum_augmentations=3, gap_tolerance=1.0e-8),
+        augmented=AugmentedContactOptions(
+            maximum_augmentations=3,
+            gap_tolerance=1.0e-8,
+        ),
+    )
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "adaptive-contact-policy",
+        seed=0,
+        solver_settings=options,
+        repo_root=Path(__file__).resolve().parents[1],
     )
     result = solve_adaptive_contact_path(
         Problem(Mesh(), (Interface(Pair(100.0)),)),
@@ -157,28 +221,39 @@ def run(output: Path) -> dict[str, object]:
         options=options,
         _solver=scripted_solver,
     )
-    rows = [
-        {name: getattr(attempt, name) for name in attempt.__dataclass_fields__}
-        for attempt in result.attempts
-    ]
-    write_csv(output / "attempt-history.csv", rows)
+    if not result.converged:
+        raise RuntimeError(
+            f"adaptive controller regression failed: {result.termination_reason}"
+        )
 
+    rows = _attempt_rows(result)
+    accepted_attempts = [
+        item for item in result.attempts if item.action == "accepted"
+    ]
     accepted_rows = [
         {
             "accepted_step": index + 1,
+            "start_load_factor": attempt.start_load_factor,
             "load_factor": attempt.target_load_factor,
             "step_size": attempt.step_size,
             "penalty": attempt.penalties_after[0],
             "newton_iterations": attempt.newton_iterations,
+            "contact_event_restarts": attempt.contact_event_restarts,
+            "equilibrium_residual": attempt.equilibrium_residual,
             "maximum_penetration": attempt.maximum_penetration,
+            "effective_load_norm": attempt.effective_load_norm,
+            "reaction_norm": attempt.reaction_norm,
+            "normalized_equilibrium_residual": (
+                attempt.normalized_equilibrium_residual
+            ),
+            "normalized_maximum_penetration": (
+                attempt.normalized_maximum_penetration
+            ),
         }
-        for index, attempt in enumerate(
-            item for item in result.attempts if item.action == "accepted"
-        )
+        for index, attempt in enumerate(accepted_attempts)
     ]
-    write_csv(output / "accepted-steps.csv", accepted_rows)
-
     summary = {
+        "schema_version": "contact3d-adaptive-policy/v1",
         "metrics": {
             "converged": result.converged,
             "termination_reason": result.termination_reason,
@@ -193,20 +268,37 @@ def run(output: Path) -> dict[str, object]:
         "attempts": rows,
         "accepted_path": accepted_rows,
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-adaptive-policy/v1",
+    )
+    artifacts.write_csv(
+        "attempt-history.csv",
+        rows,
+        schema="contact3d-adaptive-attempts/v1",
+    )
+    artifacts.write_csv(
+        "accepted-steps.csv",
+        accepted_rows,
+        schema="contact3d-adaptive-accepted-steps/v1",
     )
 
-    accepted = [item for item in result.attempts if item.action == "accepted"]
-    x_values = np.arange(1, len(accepted) + 1, dtype=float)
+    x_values = np.arange(1, len(accepted_attempts) + 1, dtype=float)
     write_line_chart(
         output / "load-path.svg",
         title="Adaptive accepted load path",
         x_label="accepted step",
         y_label="load factor",
         x_values=x_values,
-        series=((np.array([item.target_load_factor for item in accepted]), "load"),),
+        series=(
+            (
+                np.array(
+                    [item.target_load_factor for item in accepted_attempts]
+                ),
+                "load",
+            ),
+        ),
     )
     write_line_chart(
         output / "penalty-path.svg",
@@ -214,10 +306,25 @@ def run(output: Path) -> dict[str, object]:
         x_label="accepted step",
         y_label="normal penalty",
         x_values=x_values,
-        series=((np.array([item.penalties_after[0] for item in accepted]), "penalty"),),
+        series=(
+            (
+                np.array([item.penalties_after[0] for item in accepted_attempts]),
+                "penalty",
+            ),
+        ),
     )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "attempt-history.csv",
+            "accepted-steps.csv",
+            "load-path.svg",
+            "penalty-path.svg",
+        )
+    )
     return summary
 
 
