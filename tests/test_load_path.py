@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import SimpleNamespace
 
 import numpy as np
@@ -34,6 +34,16 @@ class Pair:
 @dataclass(frozen=True, slots=True)
 class Interface:
     pair: Pair
+
+    @property
+    def normal_penalty(self) -> float:
+        return self.pair.normal_penalty
+
+    def with_normal_penalty(self, normal_penalty: float) -> Interface:
+        return replace(self, pair=replace(self.pair, normal_penalty=normal_penalty))
+
+    def reference_tributary_areas(self) -> np.ndarray:
+        return np.ones(1)
 
     def initial_state(self) -> AugmentedLagrangeState:
         return AugmentedLagrangeState.zeros(1)
