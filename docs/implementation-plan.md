@@ -21,7 +21,8 @@
 - force and moment balance diagnostics;
 - frozen-pair numerical tangent oracle.
 
-The penalty residual remains the zero-multiplier baseline for verification. The same geometry and force assembly also serve the projected augmented-Lagrange law in Phase 4.
+The penalty residual remains the zero-multiplier baseline for verification. The same geometry and
+force assembly also serve the projected augmented-Lagrange law in Phase 4.
 
 ## Phase 3 — consistent geometric linearization — smooth branch complete
 
@@ -43,13 +44,21 @@ Completed:
 - comparison against independent centered-difference oracles;
 - warped nonmatching `QUAD4`/`TRI3` production-adapter regression.
 
-Remaining generalized derivatives:
+Completed topology-event foundation:
 
-- explicit edge-on-edge and on-vertex clipping derivatives;
-- transition policies for zero-area and newly appearing/disappearing pallets;
-- semismooth treatment of those topology events in the nonlinear solver.
+- typed pair, clipping, pallet, support, pressure, and inverse-map event records;
+- production overlap geometry tokens in the branch signature;
+- deterministic segment bisection and explicit left/right branch selection;
+- exact post-event Newton restart with retained smooth tangents;
+- event-aware outer augmented-Lagrange solver;
+- subdivision-invariance tables and event timeline plots.
 
-Topology, facet pairs, and unilateral activity are frozen during one smooth derivative evaluation. Clipping states inside a configurable event band, degenerate pallets, and singular inverse maps are rejected as outer topology events instead of receiving an arbitrary derivative.
+Remaining generalized derivatives and propagation:
+
+- exact one-sided/generalized clipping derivatives at edge-on-edge and on-vertex states;
+- adaptive continuation integration with absolute path-event locations;
+- event-local multiplier transport when supported row sets change;
+- rotating-overlap physical validation through repeated topology events.
 
 ## Phase 4 — constraint enforcement — in progress
 
@@ -104,7 +113,8 @@ Completed:
 - scale-aware two-interface penalty policy and unit-conversion regression;
 - production warped nonmatching moving-overlap contact-onset benchmark harness;
 - deterministic separated, first-contact, and established-contact tangent checks;
-- machine-readable nonlinear, coupled, and continuation histories;
+- synthetic topology-event localization benchmark;
+- machine-readable nonlinear, coupled, continuation, and event histories;
 - independent constitutive, element, dense-assembly, sparse-assembly, and coupled oracles;
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
 - 12-element cube-star affine patch test with an interior equilibrium node;
@@ -115,6 +125,7 @@ Completed:
 Remaining:
 
 - execute and commit the warped nonmatching contact-onset reference result set;
+- propagate localized events through adaptive mixed-path continuation;
 - scalable sparse direct and Krylov linear-solver backends;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch convergence study;
@@ -123,7 +134,8 @@ Remaining:
 - rotating concentric spheres;
 - Hertz contact and mesh-convergence studies.
 
-Every benchmark must write machine-readable convergence histories and visual deformation/contact-pressure plots.
+Every benchmark must write machine-readable convergence histories and visual deformation/contact-
+pressure plots.
 
 ## Phase 6 — extensions
 
