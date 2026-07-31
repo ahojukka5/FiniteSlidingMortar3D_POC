@@ -52,3 +52,27 @@ A commit's files should relate to each other. Good groupings, for example:
 
 Avoid mixing unrelated changes (e.g. a new feature and an unrelated docs fix) in
 one commit.
+
+### When to split further
+
+Split into separate commits when:
+
+- the description needs "and also" to explain unrelated work;
+- different file groups affect different subsystems or components;
+- cleanup or formatting isn't required by the functional change;
+- tests or docs describe a different capability than the commit's own change.
+
+If unsure whether something should be one commit or several, split further —
+small and reviewable beats big and tidy.
+
+### When to combine instead
+
+Commits that were only split by authorship mechanics, not by logical
+independence, should be squashed together before merge:
+
+- a `test:` or `docs:` commit that only makes sense describing the combined
+  effect of several preceding commits, rather than one commit's own change;
+- a chain of `fix:` commits that each corrects a mistake introduced earlier in
+  the same, not-yet-reviewed branch — squash each into the commit whose
+  mistake it corrects, so the merged history shows the feature working
+  correctly on the first attempt, not the debugging trail.
