@@ -1,0 +1,30 @@
+{
+  "metrics": {
+    "subdivision_counts": [
+      5,
+      10,
+      20,
+      40
+    ],
+    "event_rows": 32,
+    "maximum_subdivision_error": 6.98485713712671e-12,
+    "branch_selection": "right",
+    "localized_event_kinds": [
+      "clipping_vertex_edge",
+      "pair_entry",
+      "pair_exit",
+      "pallet_transition",
+      "pressure_activation",
+      "pressure_release",
+      "support_activation",
+      "support_release"
+    ]
+  },
+  "expected_locations": [
+    0.2,
+    0.4,
+    0.515,
+    0.6,
+    0.85
+  ]
+}
