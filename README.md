@@ -19,7 +19,7 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - row-wise partition-of-unity diagnostics for linear momentum conservation;
 - current-configuration averaged nodal normals from Appendix A;
 - analytical Appendix A nodal-normal Jacobian;
-- AABB broad-phase discovery independent of projected vertex ownership;
+- deterministic refittable facet BVH with a quadratic discovery oracle and diagnostics;
 - weighted mortar gaps and area-normalized frictionless penalty enforcement;
 - projected augmented-Lagrange multiplier state and updates;
 - primal, dual, complementarity, and projection-form KKT diagnostics;
@@ -46,7 +46,7 @@ The first target is the frictionless large-deformation segment-to-segment formul
 
 The package solves verification-sized coupled moving-overlap contact boundary-value problems. Scalable sparse linear solvers, `HEX8` elements, friction, adaptive event propagation, generalized clipping-event derivatives, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
 
-The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), and explicit topology localization in [the event note](docs/contact-topology-events.md).
+The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), explicit topology localization in [the event note](docs/contact-topology-events.md), and incremental candidate discovery in [the BVH note](docs/broad-phase-bvh.md).
 
 ## Development
 
@@ -69,6 +69,7 @@ uv run python benchmarks/scale_aware_penalty_regression.py --output results/scal
 uv run python benchmarks/warped_nonmatching_adapter.py --output results/warped-nonmatching-adapter
 uv run python benchmarks/warped_nonmatching_contact_onset.py --output results/warped-nonmatching-contact-onset
 uv run python benchmarks/topology_event_regression.py --output results/topology-events
+uv run python benchmarks/broad_phase_scaling.py --output results/broad-phase-scaling
 ```
 
 ## Principal source
