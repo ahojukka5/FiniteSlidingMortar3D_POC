@@ -11,6 +11,7 @@ from .bulk_sparse import Tet4SparseEvaluation, Tet4Sparsity, assemble_tet4_spars
 from .clipping import ClippingTopologyError
 from .enforcement_state import AugmentedLagrangeState, KKTDiagnostics
 from .equilibrium import DeadLoad, DirichletConstraints, NewtonOptions
+from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
 from .model import FloatArray, IntArray
 from .pallets import PalletTopologyError
 from .parametric import InverseMapTopologyError
@@ -281,6 +282,7 @@ class CoupledNewtonIteration:
     accepted_step: float
     line_search_iterations: int
     contact_branch_changed: bool
+    linear_solve: LinearSolveDiagnostics
 
 
 CoupledTerminationReason = Literal[
@@ -288,6 +290,7 @@ CoupledTerminationReason = Literal[
     "maximum_iterations",
     "line_search_failed",
     "singular_tangent",
+    "linear_solve_failed",
     "contact_linearization_event",
 ]
 ContactEventPolicy = Literal["restart", "reject"]
@@ -302,6 +305,7 @@ class CoupledNewtonResult:
     evaluation: CoupledEquilibriumEvaluation
     history: tuple[CoupledNewtonIteration, ...]
     contact_event_restarts: int
+    linear_solve_failure: LinearSolveDiagnostics | None = None
 
     @property
     def iteration_count(self) -> int:
@@ -458,6 +462,14 @@ def _relative_residual(norm: float, initial_norm: float) -> float:
     return norm / max(initial_norm, np.finfo(float).tiny)
 
 
+def _linear_failure_reason(
+    diagnostics: LinearSolveDiagnostics,
+) -> CoupledTerminationReason:
+    if diagnostics.failure_reason in {"singular_matrix", "factorization_failed"}:
+        return "singular_tangent"
+    return "linear_solve_failed"
+
+
 def solve_coupled_equilibrium(
     problem: CoupledEquilibriumProblem,
     states: tuple[AugmentedLagrangeState, ...],
@@ -524,19 +536,24 @@ def solve_coupled_equilibrium(
     for iteration in range(settings.maximum_iterations):
         free = evaluation.free_dofs
         assert evaluation.tangent is not None
-        tangent = evaluation.tangent.extract_dense(free, free)
-        try:
-            step_free = np.linalg.solve(tangent, -evaluation.residual[free])
-        except np.linalg.LinAlgError:
+        linear_result = solve_reduced_system(
+            evaluation.tangent,
+            free,
+            -evaluation.residual[free],
+            options=settings.linear_solver,
+        )
+        if linear_result.solution is None:
             return CoupledNewtonResult(
                 displacement,
                 load_factor,
                 False,
-                "singular_tangent",
+                _linear_failure_reason(linear_result.diagnostics),
                 evaluation,
                 tuple(history),
                 event_restarts,
+                linear_result.diagnostics,
             )
+        step_free = linear_result.solution
         step = np.zeros(total_dofs, dtype=float)
         step[free] = step_free
         merit = 0.5 * evaluation.free_residual_norm**2
@@ -616,6 +633,7 @@ def solve_coupled_equilibrium(
                 accepted_step=alpha,
                 line_search_iterations=line_iteration,
                 contact_branch_changed=branch_changed,
+                linear_solve=linear_result.diagnostics,
             )
         )
         if evaluation.free_residual_norm <= threshold:
