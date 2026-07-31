@@ -106,3 +106,15 @@ Every solve returns `LinearSolveDiagnostics` containing:
 
 A backend failure is returned as a result with `solution is None`; it is not hidden by an
 automatic fallback. This keeps Newton termination and benchmark comparisons reproducible.
+
+## Coupled scaling evidence
+
+The [medium coupled scaling study](linear-solver-scaling.md) applies this API to a
+three-level stacked-block contact sequence containing up to 882 total and 588 free DOFs.
+It compares dense, sparse-LU, and ILU-preconditioned GMRES paths, records every linear solve,
+and rejects any non-dense run that reports a dense materialization.
+
+```bash
+uv run python benchmarks/linear_solver_scaling.py \
+  --output results/linear-solver-scaling
+```
