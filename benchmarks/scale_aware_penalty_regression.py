@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -12,6 +11,7 @@ from xml.etree import ElementTree
 
 import numpy as np
 
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.bulk_material import NeoHookeanMaterial
 from contact3d.enforcement_state import KKTDiagnostics
 from contact3d.scaling import (
@@ -65,7 +65,10 @@ def material(young: float) -> NeoHookeanMaterial:
     return NeoHookeanMaterial.from_young_poisson(young, 0.3)
 
 
-def case(length_factor: float, pressure_factor: float) -> tuple[Problem, tuple[Contact, ...]]:
+def case(
+    length_factor: float,
+    pressure_factor: float,
+) -> tuple[Problem, tuple[Contact, ...]]:
     nodes = length_factor * np.array([[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]])
     areas = length_factor**2
     penalty_factor = pressure_factor / length_factor
@@ -121,12 +124,21 @@ def evaluate(name: str, length_factor: float, pressure_factor: float):
     )
     rows = []
     for index, (interface, contact, scale, new_penalty) in enumerate(
-        zip(problem.interfaces, contacts, scales.interfaces, plan.penalties, strict=True)
+        zip(
+            problem.interfaces,
+            contacts,
+            scales.interfaces,
+            plan.penalties,
+            strict=True,
+        )
     ):
         rows.append(
             {
                 "unit_system": name,
                 "interface": index,
+                "length_scale": scale.length,
+                "pressure_scale": scale.pressure,
+                "area_scale": scale.area,
                 "penetration": contact.diagnostics.maximum_penetration,
                 "normalized_penetration": (
                     contact.diagnostics.maximum_penetration / scale.length
@@ -149,7 +161,12 @@ def evaluate(name: str, length_factor: float, pressure_factor: float):
     return rows, plan
 
 
-def write_chart(path: Path, title: str, rows: list[dict[str, object]], field: str) -> None:
+def write_chart(
+    path: Path,
+    title: str,
+    rows: list[dict[str, object]],
+    field: str,
+) -> None:
     width, height = 760, 420
     left, right, top, bottom = 72, 28, 44, 64
     values = np.array([float(row[field]) for row in rows], dtype=float)
@@ -162,7 +179,10 @@ def write_chart(path: Path, title: str, rows: list[dict[str, object]], field: st
             f'<text x="{width / 2}" y="26" text-anchor="middle" '
             f'font-family="sans-serif" font-size="16">{title}</text>'
         ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
+        (
+            f'<line x1="{left}" y1="{top}" x2="{left}" '
+            f'y2="{height-bottom}" stroke="black"/>'
+        ),
         (
             f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
             f'y2="{height-bottom}" stroke="black"/>'
@@ -180,8 +200,8 @@ def write_chart(path: Path, title: str, rows: list[dict[str, object]], field: st
                     'fill="none" stroke="black"/>'
                 ),
                 (
-                    f'<text x="{center:.2f}" y="{height-bottom+20}" text-anchor="middle" '
-                    f'font-family="monospace" font-size="10">'
+                    f'<text x="{center:.2f}" y="{height-bottom+20}" '
+                    f'text-anchor="middle" font-family="monospace" font-size="10">'
                     f'{row["unit_system"]}:I{row["interface"]}</text>'
                 ),
             ]
@@ -192,17 +212,24 @@ def write_chart(path: Path, title: str, rows: list[dict[str, object]], field: st
 
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
+    settings = {
+        "increase_factor": 4.0,
+        "minimum_scale_factor": 0.25,
+        "maximum_scale_factor": 100.0,
+        "normalized_target": 1.0e-6,
+        "use_normalized_target": True,
+        "interface_local": True,
+    }
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "scale-aware-penalty",
+        seed=0,
+        solver_settings=settings,
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     base_rows, base_plan = evaluate("m-Pa", 1.0, 1.0)
     converted_rows, converted_plan = evaluate("mm-MPa", 1000.0, 1.0e-6)
     rows = base_rows + converted_rows
-
-    fields = list(rows[0])
-    with (output / "interface-penalty-history.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
-        writer = csv.DictWriter(stream, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows(rows)
 
     invariant = all(
         np.isclose(
@@ -219,6 +246,15 @@ def run(output: Path) -> dict[str, object]:
         )
     )
     summary = {
+        "schema_version": "contact3d-scale-aware-penalty/v1",
+        "unit_systems": (
+            {"name": "m-Pa", "length_factor": 1.0, "pressure_factor": 1.0},
+            {
+                "name": "mm-MPa",
+                "length_factor": 1000.0,
+                "pressure_factor": 1.0e-6,
+            },
+        ),
         "metrics": {
             "unit_invariant": bool(invariant),
             "updated_interfaces": [
@@ -234,9 +270,15 @@ def run(output: Path) -> dict[str, object]:
         "interfaces": rows,
         "reasons": list(base_plan.reasons),
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-scale-aware-penalty/v1",
+    )
+    artifacts.write_csv(
+        "interface-penalty-history.csv",
+        rows,
+        schema="contact3d-interface-penalties/v1",
     )
     write_chart(
         output / "normalized-penetration.svg",
@@ -252,6 +294,15 @@ def run(output: Path) -> dict[str, object]:
     )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "interface-penalty-history.csv",
+            "normalized-penetration.svg",
+            "penalty-ratio.svg",
+        )
+    )
     return summary
 
 
