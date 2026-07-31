@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from xml.etree import ElementTree
@@ -26,6 +25,7 @@ from contact3d import (
     Tet4Mesh,
     solve_adaptive_contact_path,
 )
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled_oracle import FrozenMatchingMortarInterface
 from svg_plots import write_line_chart
 
@@ -111,11 +111,66 @@ def model() -> tuple[CoupledEquilibriumProblem, LinearBoundaryPath]:
     return problem, path
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
+def _accepted_step_rows(result) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for index, step in enumerate(result.accepted_steps, start=1):
+        contact = step.result.equilibrium.evaluation.contacts[0]
+        reaction = step.reaction.reshape((-1, 3)).sum(axis=0)
+        rows.append(
+            {
+                "accepted_step": index,
+                "parameter": step.parameter,
+                "tool_x": step.path_state.value("tool_x"),
+                "tool_z": step.path_state.value("tool_z"),
+                "dead_load_x": step.path_state.value("dead_load_x"),
+                "effective_load_norm": step.path_state.effective_load_norm,
+                "reaction_x": float(reaction[0]),
+                "reaction_y": float(reaction[1]),
+                "reaction_z": float(reaction[2]),
+                "reaction_norm": step.reaction_norm,
+                "maximum_penetration": contact.diagnostics.maximum_penetration,
+                "maximum_pressure": float(np.max(contact.pressure, initial=0.0)),
+                "supported_rows": int(
+                    np.count_nonzero(contact.signature.supported_rows)
+                ),
+                "active_rows": int(np.count_nonzero(contact.signature.active_rows)),
+                "newton_iterations": sum(
+                    equilibrium.iteration_count
+                    for equilibrium in step.result.equilibria
+                ),
+                "augmentations": len(step.result.history),
+                "contact_event_restarts": sum(
+                    equilibrium.contact_event_restarts
+                    for equilibrium in step.result.equilibria
+                ),
+            }
+        )
+    return rows
+
+
+def _attempt_rows(result) -> list[dict[str, object]]:
+    return [
+        {
+            "attempt": attempt.attempt,
+            "start_parameter": attempt.start_load_factor,
+            "target_parameter": attempt.target_load_factor,
+            "step_size": attempt.step_size,
+            "action": attempt.action,
+            "inner_termination_reason": attempt.inner_termination_reason,
+            "augmentations": attempt.augmentations,
+            "newton_iterations": attempt.newton_iterations,
+            "contact_event_restarts": attempt.contact_event_restarts,
+            "equilibrium_residual": attempt.equilibrium_residual,
+            "maximum_penetration": attempt.maximum_penetration,
+            "effective_load_norm": attempt.effective_load_norm,
+            "reaction_norm": attempt.reaction_norm,
+            "penalties_before": attempt.penalties_before,
+            "penalties_after": attempt.penalties_after,
+            "prescribed_values": attempt.prescribed_values,
+            "penalty_update_reasons": attempt.penalty_update_reasons,
+        }
+        for attempt in result.attempts
+    ]
 
 
 def run(output: Path) -> dict[str, object]:
@@ -150,6 +205,13 @@ def run(output: Path) -> dict[str, object]:
             ),
         ),
     )
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "mixed-contact-onset",
+        seed=0,
+        solver_settings={"path": path, "adaptive": options},
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     result = solve_adaptive_contact_path(
         problem,
         1.0,
@@ -157,52 +219,12 @@ def run(output: Path) -> dict[str, object]:
         options=options,
     )
     if not result.converged:
-        raise RuntimeError(f"mixed contact-onset path failed: {result.termination_reason}")
-
-    step_rows: list[dict[str, object]] = []
-    for step in result.accepted_steps:
-        contact = step.result.equilibrium.evaluation.contacts[0]
-        reaction = step.reaction.reshape((-1, 3)).sum(axis=0)
-        step_rows.append(
-            {
-                "parameter": step.parameter,
-                "tool_x": step.path_state.value("tool_x"),
-                "tool_z": step.path_state.value("tool_z"),
-                "dead_load_x": step.path_state.value("dead_load_x"),
-                "effective_load_norm": step.path_state.effective_load_norm,
-                "reaction_x": float(reaction[0]),
-                "reaction_y": float(reaction[1]),
-                "reaction_z": float(reaction[2]),
-                "maximum_penetration": contact.diagnostics.maximum_penetration,
-                "maximum_pressure": float(np.max(contact.pressure, initial=0.0)),
-                "active_rows": int(np.count_nonzero(contact.signature.active_rows)),
-                "newton_iterations": sum(
-                    equilibrium.iteration_count for equilibrium in step.result.equilibria
-                ),
-                "augmentations": len(step.result.history),
-            }
+        raise RuntimeError(
+            f"mixed contact-onset path failed: {result.termination_reason}"
         )
 
-    attempt_rows = [
-        {
-            "attempt": attempt.attempt,
-            "start_parameter": attempt.start_load_factor,
-            "target_parameter": attempt.target_load_factor,
-            "action": attempt.action,
-            "inner_termination_reason": attempt.inner_termination_reason,
-            "newton_iterations": attempt.newton_iterations,
-            "augmentations": attempt.augmentations,
-            "contact_event_restarts": attempt.contact_event_restarts,
-            "equilibrium_residual": attempt.equilibrium_residual,
-            "maximum_penetration": attempt.maximum_penetration,
-            "effective_load_norm": attempt.effective_load_norm,
-            "reaction_norm": attempt.reaction_norm,
-        }
-        for attempt in result.attempts
-    ]
-    _write_csv(output / "accepted-steps.csv", step_rows)
-    _write_csv(output / "attempt-history.csv", attempt_rows)
-
+    step_rows = _accepted_step_rows(result)
+    attempt_rows = _attempt_rows(result)
     onset = next(
         (float(row["parameter"]) for row in step_rows if int(row["active_rows"]) > 0),
         None,
@@ -220,6 +242,7 @@ def run(output: Path) -> dict[str, object]:
         "final_maximum_penetration": float(step_rows[-1]["maximum_penetration"]),
     }
     summary = {
+        "schema_version": "contact3d-mixed-contact-onset/v1",
         "path": {
             "type": "linear mixed prescribed-displacement/dead-load",
             "initial_separation": 0.05,
@@ -231,9 +254,93 @@ def run(output: Path) -> dict[str, object]:
         "accepted_steps": step_rows,
         "attempts": attempt_rows,
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-mixed-contact-onset/v1",
+    )
+    artifacts.write_csv(
+        "accepted-steps.csv",
+        step_rows,
+        schema="contact3d-contact-path-steps/v1",
+    )
+    artifacts.write_csv(
+        "attempt-history.csv",
+        attempt_rows,
+        schema="contact3d-continuation-attempts/v1",
+    )
+
+    final_step = result.accepted_steps[-1]
+    final_problem = final_step.path_state.problem
+    final_result = final_step.result
+    final_evaluation = final_result.equilibrium.evaluation
+    contact = final_evaluation.contacts[0]
+    interface = final_problem.interfaces[0]
+    total_dofs = 3 * final_problem.mesh.node_count
+    contact_force = np.zeros(total_dofs)
+    np.add.at(contact_force, interface.dofs, contact.residual)
+    body_id = np.concatenate(
+        [
+            np.zeros(len(block_elements(0)), dtype=np.int64),
+            np.ones(len(block_elements(9)), dtype=np.int64),
+        ]
+    )
+    artifacts.write_tet4_vtu(
+        "deformed.vtu",
+        final_problem.mesh.reference_nodes,
+        final_problem.mesh.elements,
+        final_result.displacement,
+        point_data={
+            "reaction": final_step.reaction.reshape((-1, 3)),
+            "contact_force": contact_force.reshape((-1, 3)),
+            "effective_load": final_step.path_state.effective_force.reshape((-1, 3)),
+        },
+        cell_data={
+            "body_id": body_id,
+            "jacobian": np.asarray(
+                [item.jacobian for item in final_evaluation.bulk.element_evaluations]
+            ),
+            "energy_density": np.asarray(
+                [
+                    item.energy_density
+                    for item in final_evaluation.bulk.element_evaluations
+                ]
+            ),
+        },
+    )
+
+    local_force = contact.residual.reshape((-1, 3))
+    displacement = final_result.displacement.reshape((-1, 3))
+    slave_ids = np.asarray(interface.slave_nodes, dtype=np.int64)
+    master_ids = np.asarray(interface.master_nodes, dtype=np.int64)
+    facet = (np.arange(4, dtype=np.int64),)
+    normal = np.repeat(interface.normal[None, :], 4, axis=0)
+    artifacts.write_surface_vtp(
+        "slave-contact.vtp",
+        final_problem.mesh.reference_nodes[slave_ids],
+        facet,
+        displacement[slave_ids],
+        point_data={
+            "normal": normal,
+            "normal_gap": contact.normal_gaps,
+            "pressure": contact.pressure,
+            "multiplier": final_result.states[0].multipliers,
+            "supported": np.asarray(contact.signature.supported_rows, dtype=np.int64),
+            "active": np.asarray(contact.signature.active_rows, dtype=np.int64),
+            "contact_force": local_force[:4],
+        },
+        cell_data={"interface_area": np.asarray([interface.area])},
+    )
+    artifacts.write_surface_vtp(
+        "master-contact.vtp",
+        final_problem.mesh.reference_nodes[master_ids],
+        facet,
+        displacement[master_ids],
+        point_data={
+            "normal": normal,
+            "contact_force": local_force[4:],
+        },
+        cell_data={"interface_area": np.asarray([interface.area])},
     )
 
     parameter = np.asarray([float(row["parameter"]) for row in step_rows])
@@ -267,6 +374,19 @@ def run(output: Path) -> dict[str, object]:
     )
     for path_name in output.glob("*.svg"):
         ElementTree.parse(path_name)
+        artifacts.register(path_name.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "accepted-steps.csv",
+            "attempt-history.csv",
+            "deformed.vtu",
+            "slave-contact.vtp",
+            "master-contact.vtp",
+            "reaction-path.svg",
+            "contact-onset.svg",
+        )
+    )
     return summary
 
 
