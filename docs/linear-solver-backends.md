@@ -4,9 +4,9 @@ The global finite-element tangent is stored in the package's deterministic `CSRM
 format. The linear-solver layer consumes that storage directly and keeps dense conversion
 behind the explicit `dense` backend.
 
-This first issue-20 slice implements and verifies the backend boundary. Wiring the backend
-selection and diagnostics into the bulk, coupled-contact, and event-localized Newton drivers
-is intentionally left for the next slice so the solver API can be reviewed independently.
+Bulk, coupled-contact, and event-localized Newton drivers all use this backend boundary.
+The backend selection is part of `NewtonOptions`, so benchmark and application code can
+change the linear algebra without changing mechanics code.
 
 ## Backends
 
@@ -35,7 +35,7 @@ its requested rows and columns. `solve_reduced_system` uses it to form and solve
 block without materializing the complete tangent as a dense array.
 
 ```python
-from contact3d.linear_solver import LinearSolverOptions, solve_reduced_system
+from contact3d import LinearSolverOptions, solve_reduced_system
 
 result = solve_reduced_system(
     tangent,
@@ -44,6 +44,38 @@ result = solve_reduced_system(
     options=LinearSolverOptions(backend="sparse_lu"),
 )
 ```
+
+## Newton integration
+
+Configure all Newton variants through the nested linear-solver options:
+
+```python
+from contact3d import LinearSolverOptions, NewtonOptions, solve_coupled_equilibrium
+
+options = NewtonOptions(
+    maximum_iterations=40,
+    linear_solver=LinearSolverOptions(
+        backend="gmres",
+        preconditioner="ilu",
+        relative_tolerance=1.0e-10,
+    ),
+)
+result = solve_coupled_equilibrium(
+    problem,
+    problem.initial_states(),
+    options=options,
+)
+```
+
+Every accepted `NewtonIteration` or `CoupledNewtonIteration` stores its
+`LinearSolveDiagnostics` as `linear_solve`. A failed backend is retained as
+`linear_solve_failure` on the Newton result. Singular direct factorizations preserve the
+legacy `singular_tangent` termination reason; other backend failures use
+`linear_solve_failed` and retain the more specific backend failure reason.
+
+The event-localized solver uses the same reduced solve before localizing and restarting at
+a topology event. Its event-aware result preserves the same accepted and failed linear
+records, and conversion to the legacy coupled result keeps those diagnostics.
 
 ## Preconditioners
 
