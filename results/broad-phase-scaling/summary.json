@@ -1,0 +1,81 @@
+{
+  "metrics": {
+    "all_pair_sets_equal": true,
+    "facet_counts": [
+      64,
+      256,
+      576,
+      1024
+    ],
+    "largest_tested_fraction": 0.2734375,
+    "smallest_tested_fraction": 0.03194625289351852,
+    "facet_test_growth_exponent": 1.2239005643986407,
+    "largest_refit_to_build_ratio": 0.8024783912838683
+  },
+  "rows": [
+    {
+      "subdivisions": 8,
+      "slave_facets": 64,
+      "master_facets": 64,
+      "accepted_pairs": 484,
+      "tree_nodes": 15,
+      "node_visits": 552,
+      "facet_tests": 1120,
+      "quadratic_tests": 4096,
+      "tested_fraction": 0.2734375,
+      "build_seconds": 0.0005415609999772641,
+      "refit_seconds": 0.000434591000043838,
+      "query_seconds": 0.006507495000050767,
+      "refit_to_build_ratio": 0.8024783912838683,
+      "pair_sets_equal": true
+    },
+    {
+      "subdivisions": 16,
+      "slave_facets": 256,
+      "master_facets": 256,
+      "accepted_pairs": 2116,
+      "tree_nodes": 63,
+      "node_visits": 3752,
+      "facet_tests": 5280,
+      "quadratic_tests": 65536,
+      "tested_fraction": 0.08056640625,
+      "build_seconds": 0.0023449020000043674,
+      "refit_seconds": 0.001865071999986867,
+      "query_seconds": 0.03726206400006049,
+      "refit_to_build_ratio": 0.7953731115344663,
+      "pair_sets_equal": true
+    },
+    {
+      "subdivisions": 24,
+      "slave_facets": 576,
+      "master_facets": 576,
+      "accepted_pairs": 4900,
+      "tree_nodes": 255,
+      "node_visits": 12872,
+      "facet_tests": 10599,
+      "quadratic_tests": 331776,
+      "tested_fraction": 0.03194625289351852,
+      "build_seconds": 0.006474921999938488,
+      "refit_seconds": 0.004497338000078344,
+      "query_seconds": 0.09133662799990816,
+      "refit_to_build_ratio": 0.6945779424247996,
+      "pair_sets_equal": true
+    },
+    {
+      "subdivisions": 32,
+      "slave_facets": 1024,
+      "master_facets": 1024,
+      "accepted_pairs": 20116,
+      "tree_nodes": 255,
+      "node_visits": 26824,
+      "facet_tests": 40800,
+      "quadratic_tests": 1048576,
+      "tested_fraction": 0.038909912109375,
+      "build_seconds": 0.010983033999991676,
+      "refit_seconds": 0.008354746000009072,
+      "query_seconds": 0.28474431999995886,
+      "refit_to_build_ratio": 0.7606956329203209,
+      "pair_sets_equal": true
+    }
+  ]
+}
