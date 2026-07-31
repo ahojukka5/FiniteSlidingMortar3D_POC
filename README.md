@@ -29,6 +29,7 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - dense and deterministic CSR `TET4` mesh assembly with independent derivative oracles;
 - configurable dense, sparse-LU, GMRES, and BiCGSTAB linear-system backends;
 - linear-solver residual, timing, storage, and failure diagnostics;
+- medium coupled dense/sparse/Krylov scaling benchmark with CSR storage checks;
 - strong essential boundary conditions, dead nodal loads, and reaction extraction;
 - coupled bulk/contact Newton equilibrium with explicit contact-event restarts;
 - typed pair, clipping, pallet, support, and pressure event localization;
@@ -46,9 +47,9 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - force and moment balance diagnostics;
 - retained numerical operator and residual-tangent oracles.
 
-The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers; larger scaling and preconditioner studies remain part of issue #20. `HEX8` elements, friction, adaptive event propagation, generalized clipping-event derivatives, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
+The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers and exercised by a reproducible medium coupled scaling study. `HEX8` elements, friction, adaptive event propagation, generalized clipping-event derivatives, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
 
-The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the linear backend boundary in [the solver note](docs/linear-solver-backends.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), explicit topology localization in [the event note](docs/contact-topology-events.md), and incremental candidate discovery in [the BVH note](docs/broad-phase-bvh.md).
+The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the linear backend boundary in [the solver note](docs/linear-solver-backends.md), its medium coupled evidence in [the solver scaling note](docs/linear-solver-scaling.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), explicit topology localization in [the event note](docs/contact-topology-events.md), and incremental candidate discovery in [the BVH note](docs/broad-phase-bvh.md).
 
 ## Development
 
@@ -78,6 +79,7 @@ uv run python benchmarks/warped_nonmatching_adapter.py --output results/warped-n
 uv run python benchmarks/warped_nonmatching_contact_onset.py --output results/warped-nonmatching-contact-onset
 uv run python benchmarks/topology_event_regression.py --output results/topology-events
 uv run python benchmarks/broad_phase_scaling.py --output results/broad-phase-scaling
+uv run python benchmarks/linear_solver_scaling.py --output results/linear-solver-scaling
 ```
 
 ## Principal source
