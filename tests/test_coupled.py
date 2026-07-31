@@ -245,3 +245,51 @@ def test_maximum_augmentation_returns_equilibrated_multiplier_state() -> None:
     assert result.states[0].augmentation == 0
     evaluated_state = result.equilibrium.evaluation.contacts[0].raw[0]
     np.testing.assert_allclose(result.states[0].multipliers, evaluated_state.multipliers)
+
+
+def test_frozen_matching_mortar_area_scales_force_and_tangent() -> None:
+    slave = np.arange(4, dtype=np.int64)
+    master = np.arange(4, 8, dtype=np.int64)
+    normal = np.array([0.0, 0.0, -1.0])
+    full = FrozenMatchingMortarInterface(slave, master, normal, 6400.0)
+    quarter = FrozenMatchingMortarInterface(
+        slave,
+        master,
+        normal,
+        6400.0,
+        area=0.25,
+    )
+    displacement = np.zeros((8, 3))
+    displacement[slave, 2] = -0.01
+    state = full.initial_state()
+
+    full_evaluation = full.evaluate(
+        displacement.ravel(),
+        state,
+        tolerance=1.0e-12,
+    )
+    quarter_evaluation = quarter.evaluate(
+        displacement.ravel(),
+        state,
+        tolerance=1.0e-12,
+    )
+    np.testing.assert_allclose(quarter_evaluation.normal_gaps, full_evaluation.normal_gaps)
+    np.testing.assert_allclose(quarter_evaluation.pressure, full_evaluation.pressure)
+    np.testing.assert_allclose(quarter_evaluation.residual, 0.25 * full_evaluation.residual)
+
+    full_tangent = full.tangent(
+        displacement.ravel(),
+        state,
+        full_evaluation,
+        tolerance=1.0e-12,
+    )
+    quarter_tangent = quarter.tangent(
+        displacement.ravel(),
+        state,
+        quarter_evaluation,
+        tolerance=1.0e-12,
+    )
+    np.testing.assert_allclose(quarter_tangent, 0.25 * full_tangent)
+
+    with pytest.raises(ValueError, match="area"):
+        FrozenMatchingMortarInterface(slave, master, normal, 6400.0, area=0.0)

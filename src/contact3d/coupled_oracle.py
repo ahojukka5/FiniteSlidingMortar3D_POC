@@ -24,11 +24,12 @@ MATCHING_QUAD_MASS = np.array(
 
 @dataclass(frozen=True, slots=True)
 class FrozenMatchingMortarInterface:
-    """Exact standard-mortar operator for two matching unit-square Q1 facets.
+    """Exact standard-mortar operator for two matching Q1 facets.
 
     This verification kernel deliberately freezes the overlap, normal, and D/M
     operators. It tests global coupling and augmentation independently from the
-    already verified moving-overlap derivatives.
+    already verified moving-overlap derivatives. ``area`` scales the unit-square
+    mass matrix so structured verification meshes retain physical force scaling.
     """
 
     slave_nodes: np.ndarray
@@ -37,10 +38,13 @@ class FrozenMatchingMortarInterface:
     penalty: float
     event_gap: float | None = None
     initial_normal_gap: float = 0.0
+    area: float = 1.0
 
     def __post_init__(self) -> None:
         if not np.isfinite(self.initial_normal_gap):
             raise ValueError("initial_normal_gap must be finite")
+        if not np.isfinite(self.area) or self.area <= 0.0:
+            raise ValueError("area must be finite and positive")
 
     @property
     def dofs(self) -> np.ndarray:
@@ -53,12 +57,16 @@ class FrozenMatchingMortarInterface:
     def initial_state(self) -> AugmentedLagrangeState:
         return AugmentedLagrangeState.zeros(4)
 
+    def _mass_matrix(self) -> np.ndarray:
+        return self.area * MATCHING_QUAD_MASS
+
     def _kinematics(self, displacement: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         values = np.asarray(displacement, dtype=float).reshape((-1, 3))
         slave = values[self.slave_nodes]
         master = values[self.master_nodes]
-        row_areas = np.sum(MATCHING_QUAD_MASS, axis=1)
-        weighted_gap = MATCHING_QUAD_MASS @ slave - MATCHING_QUAD_MASS @ master
+        mass = self._mass_matrix()
+        row_areas = np.sum(mass, axis=1)
+        weighted_gap = mass @ slave - mass @ master
         normal_gaps = self.initial_normal_gap + weighted_gap @ self.normal / row_areas
         return row_areas, normal_gaps
 
@@ -75,8 +83,9 @@ class FrozenMatchingMortarInterface:
         active = trial > 0.0
         pressure = np.maximum(trial, 0.0)
         traction = pressure[:, None] * self.normal
-        slave_force = MATCHING_QUAD_MASS.T @ traction
-        master_force = -(MATCHING_QUAD_MASS.T @ traction)
+        mass = self._mass_matrix()
+        slave_force = mass.T @ traction
+        master_force = -(mass.T @ traction)
         residual = np.concatenate([slave_force.ravel(), master_force.ravel()])
         region = 0
         if self.event_gap is not None:
@@ -111,26 +120,27 @@ class FrozenMatchingMortarInterface:
     ) -> np.ndarray:
         del displacement, state, tolerance
         _, _, active = evaluation.raw
-        row_areas = np.sum(MATCHING_QUAD_MASS, axis=1)
+        mass = self._mass_matrix()
+        row_areas = np.sum(mass, axis=1)
         gap_jacobian = np.zeros((4, 24), dtype=float)
         for row in range(4):
             for node in range(4):
                 gap_jacobian[row, 3 * node : 3 * node + 3] += (
-                    MATCHING_QUAD_MASS[row, node] * self.normal / row_areas[row]
+                    mass[row, node] * self.normal / row_areas[row]
                 )
                 gap_jacobian[row, 12 + 3 * node : 15 + 3 * node] -= (
-                    MATCHING_QUAD_MASS[row, node] * self.normal / row_areas[row]
+                    mass[row, node] * self.normal / row_areas[row]
                 )
         pressure_jacobian = self.penalty * active[:, None] * gap_jacobian
         traction_jacobian = pressure_jacobian[:, None, :] * self.normal[None, :, None]
         slave = np.einsum(
             "ji,jcq->icq",
-            MATCHING_QUAD_MASS,
+            mass,
             traction_jacobian,
         ).reshape((12, 24))
         master = -np.einsum(
             "ji,jcq->icq",
-            MATCHING_QUAD_MASS,
+            mass,
             traction_jacobian,
         ).reshape((12, 24))
         return np.vstack([slave, master])
