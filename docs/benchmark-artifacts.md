@@ -48,13 +48,23 @@ silently omitted.
 ## Record schemas
 
 Specific JSON and CSV files carry independent schema names in their artifact records. The
-first migrated benchmarks use:
+current core suite uses:
 
-- `contact3d-nonlinear-equilibrium/v1` for the bulk summary;
-- `contact3d-newton-iterations/v1` for accepted Newton and linear-solver rows;
+- `contact3d-tet4-patch/v1` for the affine bulk patch summary;
+- `contact3d-tangent-convergence/v1` for directional tangent studies;
+- `contact3d-nonlinear-equilibrium/v1` for the nonlinear bulk summary;
+- `contact3d-newton-iterations/v1` for bulk Newton and linear-solver rows;
 - `contact3d-load-steps/v1` for continuation rows;
+- `contact3d-coupled-mortar-patch/v1` for the matching coupled patch summary;
+- `contact3d-augmentation-iterations/v1` for augmented-Lagrange outer iterations;
+- `contact3d-coupled-newton-iterations/v1` for coupled Newton rows with flattened linear
+  diagnostics;
+- `contact3d-adaptive-policy/v1` for the adaptive-controller summary;
+- `contact3d-adaptive-attempts/v1` for accepted, cut-back, and penalty-escalated attempts;
+- `contact3d-adaptive-accepted-steps/v1` for the committed controller path;
 - `contact3d-warped-adapter/v1` for the production contact summary;
-- `contact3d-contact-nodes/v1` for slave-node gap, pressure, support, and activity.
+- `contact3d-contact-nodes/v1` for slave-node gap, pressure, multiplier, support, and
+  activity.
 
 Later benchmark families can add compatible record schemas without changing the directory
 manifest version. The manifest version changes only when the outer contract itself changes.
@@ -71,20 +81,34 @@ array contains current coordinates. Point data always includes:
 - `reference_coordinates`;
 - `displacement`.
 
-Benchmarks can add nodal vectors or scalars and element fields. The migrated nonlinear
-bulk benchmark writes:
+The affine patch writes `affine-patch.vtu` with nodal internal force and element Jacobian,
+energy-density, and deformation-gradient-error fields.
+
+The nonlinear bulk benchmark writes `deformed.vtu` with:
 
 - nodal reaction and external load vectors;
 - element Jacobian determinants;
 - element strain-energy density.
 
-Open `deformed.vtu` in ParaView and color by `jacobian` or `energy_density`, or apply a Glyph
-filter to the reaction and load vectors.
+The coupled mortar patch writes `deformed.vtu` with:
+
+- nodal reactions, external loads, and assembled contact-force vectors;
+- element body identifiers, Jacobian determinants, and strain-energy density.
+
+Open these files in ParaView and color by `jacobian`, `energy_density`, or `body_id`, or apply
+a Glyph filter to the force vectors.
 
 ### Contact surfaces and overlap regions
 
-`write_surface_vtp` writes TRI3, QUAD4, or general polygon cells as `PolyData`. The migrated
-warped nonmatching adapter writes:
+`write_surface_vtp` writes TRI3, QUAD4, or general polygon cells as `PolyData`.
+
+The coupled mortar patch writes:
+
+- `slave-contact.vtp` with normal, gap, pressure, multiplier, support, activity, and contact
+  force;
+- `master-contact.vtp` with normal, contact force, and interface area.
+
+The warped nonmatching adapter writes:
 
 - `slave-contact.vtp` with nodal normal gap, pressure, support, and active-state fields;
 - `master-contact.vtp` with integrated overlap area per master facet;
@@ -145,13 +169,18 @@ Run one benchmark by repeating `--benchmark` as needed:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
-  --benchmark nonlinear-equilibrium \
+  --benchmark coupled-mortar-patch \
+  --benchmark adaptive-contact-policy \
   --output results/standardized-benchmarks
 ```
 
-The runner currently covers:
+The runner currently covers the core patch, bulk, coupled, adaptive, and production-interface
+families:
 
+- `tet4-patch`;
 - `nonlinear-equilibrium`;
+- `coupled-mortar-patch`;
+- `adaptive-contact-policy`;
 - `warped-nonmatching-adapter`.
 
 It writes `suite-summary.json` only after every subprocess succeeds and every manifest passes
@@ -159,11 +188,11 @@ schema and file-completeness validation.
 
 ## Remaining issue-22 work
 
-This is the foundational slice of issue 22. The remaining work is intentionally explicit:
+The core acceptance families—patch, bulk, coupled, and adaptive—now use the common contract.
+The remaining work is:
 
-- migrate the patch, coupled, adaptive, mixed-path, onset, event, BVH, and solver-scaling
-  benchmarks;
+- migrate the mixed-path, onset, scale-aware, event, BVH, and solver-scaling benchmarks;
 - move repeated SVG chart implementations behind common plotting helpers;
-- add versioned augmentation, KKT, event, facet-pair, and mesh-refinement row schemas;
-- export complete coupled volume/contact states from the adaptive and onset benchmarks;
+- add versioned KKT, event, facet-pair, and mesh-refinement row schemas;
+- export complete coupled volume/contact states from the adaptive onset benchmarks;
 - add checked-in tolerance specifications for selected golden regression metrics.
