@@ -152,9 +152,29 @@ The warped nonmatching adapter and warped production-onset benchmark also write:
 
 It also records `pair_index` and `projected_area` on every polygon cell.
 
+## Shared SVG plots
+
+`contact3d.benchmark_plots` contains the dependency-free SVG implementation used by benchmark
+scripts. It validates dimensions and finite values, escapes text inserted into XML, and writes
+deterministic output. The public helpers cover:
+
+- linear and logarithmic multi-series response and convergence charts;
+- nonnegative scalar bar charts with optional annotations;
+- categorical event timelines;
+- projected polygon overlays;
+- reference/current TET4 mesh projections;
+- CSR sparsity patterns.
+
+`benchmarks/svg_plots.py` remains as a compatibility import for scripts that historically
+imported `write_line_chart` or `write_sparsity` from the benchmark directory. New code should
+import the package-level module directly.
+
+The topology-event, BVH-scaling, mixed-path, scale-aware, warped-adapter, and warped-onset
+families now use the shared helpers instead of maintaining duplicate SVG coordinate logic.
+
 ## Numeric regression checks
 
-Golden results must be compared numerically rather than by raw JSON or CSV equality.
+Golden results are compared numerically rather than by raw JSON or CSV equality.
 `compare_numeric_metrics` accepts dotted metric paths and one `NumericTolerance` per metric:
 
 ```python
@@ -183,9 +203,28 @@ The allowed error is
 Missing, nonnumeric, nonfinite, or out-of-tolerance metrics raise
 `BenchmarkArtifactError` with the failed metric paths.
 
+### Checked-in golden specifications
+
+Stable metric selections are stored in `benchmarks/goldens/*.json` using schema
+`contact3d-golden-metrics/v1`. Each file declares:
+
+- one benchmark and source JSON artifact;
+- the compatible `full` and/or `quick` profiles;
+- dotted numeric metric paths;
+- a finite reference value;
+- explicit absolute and relative tolerances.
+
+The initial selections cover nonlinear equilibrium, the deterministic mixed path,
+scale-aware penalty control, topology-event localization, and the published full BVH scaling
+profile. Timing values and other machine-dependent measurements are deliberately excluded.
+
+`contact3d.benchmark_goldens` validates these files, rejects duplicate benchmark selections,
+and evaluates only specifications compatible with the active runner profile.
+
 ## Standardized runner
 
-Run every migrated benchmark with its published settings and validate all manifests with:
+Run every benchmark with its published settings and validate manifests and checked golden
+metrics with:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
@@ -211,6 +250,10 @@ uv run python benchmarks/run_standardized.py \
   --output results/standardized-benchmarks
 ```
 
+Use `--golden-dir PATH` to evaluate another reviewed specification set. Use
+`--skip-goldens` only when regenerating exploratory output that is intentionally not a
+regression run.
+
 The runner covers twelve families:
 
 - `tet4-patch`;
@@ -226,9 +269,10 @@ The runner covers twelve families:
 - `broad-phase-scaling`;
 - `linear-solver-scaling`.
 
-It writes `suite-summary.json` only after every subprocess succeeds and every manifest passes
-schema and file-completeness validation. The summary records whether the run used the `full`
-or `quick` profile.
+It writes `suite-summary.json` only after every subprocess succeeds and every manifest and
+applicable golden selection passes. `golden-regressions.json` records passed,
+profile-skipped, unconfigured, or explicitly disabled status for every selected benchmark and
+contains the full per-metric tolerance report.
 
 ## Event and scaling artifacts
 
@@ -246,13 +290,10 @@ penetration, pressure, active rows, and event restarts. Its full profile retains
 500-free-DOF acceptance threshold. The quick profile lowers that threshold to zero and runs
 only dense and sparse-LU oracles on levels 1 and 2.
 
-## Remaining issue-22 work
+## Issue 22 completion boundary
 
-Every existing benchmark now uses the common manifest contract and can be regenerated through
-the standardized runner. The remaining completion work is deliberately limited to:
-
-- move repeated bespoke SVG charts behind common plotting helpers;
-- add checked-in tolerance specifications and golden metric selections for stable numerical
-  regressions;
-- add KKT, facet-pair, and mesh-refinement schemas when the corresponding new benchmark
-  families are implemented.
+All benchmark families present when issue 22 was opened now use the common manifest contract,
+shared artifact writers, reusable SVG helpers, provenance records, one standardized runner,
+ParaView-readable fields, and tolerance-based checked metric selections. New KKT, facet-pair,
+and mesh-refinement row schemas belong to the future benchmark families that produce those
+records and do not block this artifact-contract milestone.
