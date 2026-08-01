@@ -34,6 +34,8 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - coupled bulk/contact Newton equilibrium with explicit contact-event restarts;
 - typed pair, clipping, pallet, support, and pressure event localization;
 - deterministic left/right branch selection and exact post-event Newton restart;
+- event-aware dimensional and scale-aware augmented-Lagrange solution;
+- event-aware adaptive mixed continuation with absolute path records;
 - outer augmented-Lagrange solution with exact KKT stopping criteria;
 - adaptive load cutback, growth, and transactional normal-penalty escalation;
 - immutable prescribed-displacement, dead-load, and mixed continuation paths;
@@ -47,15 +49,15 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - ParaView-readable TET4 volume, contact-surface, and projected-overlap VTK output;
 - reusable validated SVG line, bar, event, polygon, mesh, and sparsity plots;
 - checked profile-aware numeric golden specifications with explicit tolerances;
-- standardized patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware,
-  production-interface, warped production-onset, topology-event, BVH, and linear-solver
-  benchmark suite;
+- standardized patch, bulk, coupled, adaptive-policy, adaptive-event, mixed-path, onset,
+  scale-aware, production-interface, warped production-onset, topology-event, BVH, and
+  linear-solver benchmark suite;
 - machine-readable patch, nonlinear, coupled, continuation, scaling, event, search, solver,
   and golden-regression artifacts;
 - force and moment balance diagnostics;
 - retained numerical operator and residual-tangent oracles.
 
-The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers and exercised by a reproducible medium coupled scaling study. `HEX8` elements, friction, adaptive event propagation, generalized clipping-event derivatives, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
+The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers and exercised by a reproducible medium coupled scaling study. `HEX8` elements, friction, production rotating-overlap validation, generalized clipping-event derivatives beyond one-sided branch selection, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
 
 The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the linear backend boundary in [the solver note](docs/linear-solver-backends.md), its medium coupled evidence in [the solver scaling note](docs/linear-solver-scaling.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), explicit topology localization in [the event note](docs/contact-topology-events.md), incremental candidate discovery in [the BVH note](docs/broad-phase-bvh.md), and versioned result directories, plots, VTK output, and golden checks in [the benchmark artifact note](docs/benchmark-artifacts.md).
 
@@ -98,6 +100,7 @@ uv run python benchmarks/tet4_patch.py --output results/tet4-patch
 uv run python benchmarks/nonlinear_equilibrium.py --output results/nonlinear-equilibrium
 uv run python benchmarks/coupled_mortar_patch.py --output results/coupled-mortar-patch
 uv run python benchmarks/adaptive_policy_regression.py --output results/adaptive-contact-policy
+uv run python benchmarks/adaptive_event_regression.py --output results/adaptive-topology-events
 uv run python benchmarks/mixed_path_regression.py --output results/mixed-load-path
 uv run python benchmarks/mixed_contact_onset.py --output results/mixed-contact-onset
 uv run python benchmarks/scale_aware_penalty_regression.py --output results/scale-aware-penalty

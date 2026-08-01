@@ -50,14 +50,17 @@ Completed topology-event foundation:
 - production overlap geometry tokens in the branch signature;
 - deterministic segment bisection and explicit left/right branch selection;
 - exact post-event Newton restart with retained smooth tangents;
-- event-aware outer augmented-Lagrange solver;
+- event-aware dimensional and scale-aware augmented-Lagrange solvers;
+- adaptive load, prescribed-displacement, and mixed-path event propagation;
+- absolute continuation targets separated from local Newton event fractions;
+- event retention across accepted, cut-back, and penalty-retried attempts;
 - subdivision-invariance tables and event timeline plots.
 
-Remaining generalized derivatives and propagation:
+Remaining generalized derivatives and validation:
 
-- exact one-sided/generalized clipping derivatives at edge-on-edge and on-vertex states;
-- adaptive continuation integration with absolute path-event locations;
-- event-local multiplier transport when supported row sets change;
+- exact special-state derivatives at edge-on-edge and on-vertex configurations where a unique
+  generalized branch cannot be represented by one-sided smooth restart alone;
+- event-local multiplier transport when supported row sets change dimension;
 - rotating-overlap physical validation through repeated topology events.
 
 ## Phase 4 — constraint enforcement — in progress
@@ -114,22 +117,21 @@ Completed:
 - production warped nonmatching moving-overlap contact-onset benchmark harness;
 - deterministic separated, first-contact, and established-contact tangent checks;
 - synthetic topology-event localization benchmark;
+- adaptive mixed-path event-propagation benchmark;
 - machine-readable nonlinear, coupled, continuation, and event histories;
 - independent constitutive, element, dense-assembly, sparse-assembly, and coupled oracles;
 - energy-gradient, objectivity, force-balance, moment-balance, and reaction regressions;
 - 12-element cube-star affine patch test with an interior equilibrium node;
 - manufactured large-deformation equilibrium benchmark with line-search cutbacks;
 - matching-mortar two-block coupled benchmark;
+- sparse direct and Krylov linear-solver backends with scaling evidence;
 - JSON/CSV result tables and SVG convergence, response, pressure, and continuation plots.
 
 Remaining:
 
-- execute and commit the warped nonmatching contact-onset reference result set;
-- propagate localized events through adaptive mixed-path continuation;
-- scalable sparse direct and Krylov linear-solver backends;
+- production rotating blocks with changing overlap area;
 - `HEX8` finite-strain neo-Hookean element and locking studies;
 - warped-interface contact patch convergence study;
-- rotating blocks with changing overlap area;
 - cylindrical ironing;
 - rotating concentric spheres;
 - Hertz contact and mesh-convergence studies.

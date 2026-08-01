@@ -4,7 +4,7 @@ The analytical mortar tangent is valid while the discrete contact branch is fixe
 only the unilateral active set. It also contains the integrated facet pairs, supported slave rows,
 and the topology of every projected intersection polygon and centroid-fan pallet decomposition.
 
-This note documents the first explicit event-state-machine layer. It replaces the previous Boolean
+This note documents the explicit event-state-machine layer. It replaces the previous Boolean
 "branch changed" restart with typed, localized, reproducible event records.
 
 ## Branch signature
@@ -54,9 +54,11 @@ The selected derivative branch is explicit:
 - `left` is available for verification and one-sided derivative studies.
 
 A localized batch stores the final left/event/right fractions, selected fraction, selected branch,
-and every atomic event in stable interface/kind/entity order.
+and every atomic event in stable interface/kind/entity order. The post-event analytical tangent is
+the one-sided generalized derivative used by the semismooth restart; no numerical contact tangent or
+operator freezing is introduced.
 
-## Newton integration
+## Newton and augmentation integration
 
 `solve_event_aware_coupled_equilibrium` retains the established smooth residual and tangent. When a
 residual-only line-search trial is on another branch, it
@@ -72,24 +74,52 @@ smooth steps use the unchanged Armijo residual merit test. `event_policy="reject
 behavior for comparison.
 
 `solve_event_aware_augmented_contact` uses the same inner solver and retains event histories across
-all multiplier augmentations.
+all multiplier augmentations. `solve_event_aware_scale_aware_augmented_contact` applies the same
+event-localized Newton path with unit-consistent equilibrium and KKT thresholds.
 
-## Determinism regression
+## Adaptive mixed-path integration
 
-The committed synthetic regression crosses pair, clipping, pallet, support, and pressure events with
-5, 10, 20, and 40 subdivisions. Event locations are compared against the finest partition. The
-state machine must select the right branch and reproduce the same atomic transition ordering.
+`solve_event_aware_adaptive_contact_path` propagates the localized augmented solver through load,
+prescribed-displacement, and mixed continuation paths. It retains event batches from
+
+- accepted attempts;
+- attempts rejected by load cutback;
+- failed augmented solves that trigger a penalty retry.
+
+Every adaptive event record stores the attempt action, start and target continuation parameters,
+named path values, solver load factor, augmentation index, and the original Newton event batch. The
+absolute continuation parameter is the target path state at which the nonlinear solve was executed.
+The local `event_newton_fraction` remains separate: it parameterizes the Newton correction inside
+that fixed path state and must not be interpreted as a continuation interpolation fraction.
+
+This distinction is essential for mixed paths. Such paths commonly use
+`solver_load_factor = 1` while prescribed displacements and effective loads vary with an independent
+continuation parameter.
+
+## Determinism regressions
+
+The topology regression crosses pair, clipping, pallet, support, and pressure events with 5, 10, 20,
+and 40 subdivisions. Event locations are compared against the finest partition. The state machine
+must select the right branch and reproduce the same atomic transition ordering.
+
+The adaptive regression adds a mixed path with one cutback. It proves that rejected and accepted
+event batches retain their absolute continuation targets while all inner solves use the same unit
+solver load factor. Both regressions write machine-readable event tables and SVG timelines.
 
 Regenerate with
 
 ```bash
 uv run python benchmarks/topology_event_regression.py \
   --output results/topology-events
+
+uv run python benchmarks/adaptive_event_regression.py \
+  --output results/adaptive-topology-events
 ```
 
 ## Current boundary
 
-This slice localizes events inside Newton trial segments and derives geometry topology from the
-production projected overlap. It does not yet replace the adaptive continuation controller's outer
-cutback policy. The next slice must propagate event-aware augmented solves through adaptive mixed
-paths and record absolute continuation parameters for every event.
+Event localization now spans Newton, projected augmentation, scale-aware convergence, and adaptive
+mixed continuation. The remaining issue-18 evidence is a production rotating-overlap problem in
+which real projected polygons repeatedly cross edge-on-edge, on-vertex, pair, pallet, support, and
+pressure transitions. That benchmark is tracked by issue #24; it must demonstrate path-subdivision
+reproducibility without relying on arbitrary cutback around recoverable topology events.
