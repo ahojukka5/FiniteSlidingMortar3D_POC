@@ -125,6 +125,7 @@ def test_checked_goldens_match_committed_full_results() -> None:
     }
 
     assert set(reports) == {
+        "adaptive-topology-events",
         "broad-phase-scaling",
         "mixed-load-path",
         "nonlinear-equilibrium",

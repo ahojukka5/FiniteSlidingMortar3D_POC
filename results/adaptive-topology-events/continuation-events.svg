@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="300">
+<rect width="100%" height="100%" fill="white"/>
+<text x="410.0" y="26" text-anchor="middle" font-family="sans-serif" font-size="16">Adaptive topology events on the absolute mixed path</text>
+<line x1="150" y1="242" x2="788" y2="242" stroke="black"/>
+<text x="469.0" y="284" text-anchor="middle" font-family="sans-serif" font-size="13">continuation parameter</text>
+<line x1="150" y1="48.00" x2="788" y2="48.00" stroke="#dddddd"/>
+<text x="142" y="52.00" text-anchor="end" font-family="monospace" font-size="10">clipping_vertex_edge</text>
+<line x1="150" y1="112.67" x2="788" y2="112.67" stroke="#dddddd"/>
+<text x="142" y="116.67" text-anchor="end" font-family="monospace" font-size="10">pair_entry</text>
+<line x1="150" y1="177.33" x2="788" y2="177.33" stroke="#dddddd"/>
+<text x="142" y="181.33" text-anchor="end" font-family="monospace" font-size="10">pallet_transition</text>
+<line x1="150" y1="242.00" x2="788" y2="242.00" stroke="#dddddd"/>
+<text x="142" y="246.00" text-anchor="end" font-family="monospace" font-size="10">pressure_activation</text>
+<circle cx="528.074" cy="112.667" r="3" fill="white" stroke="black"/>
+<circle cx="173.630" cy="48.000" r="5" fill="white" stroke="black"/>
+<circle cx="528.074" cy="177.333" r="5" fill="white" stroke="black"/>
+<circle cx="764.370" cy="242.000" r="5" fill="white" stroke="black"/>
+</svg>

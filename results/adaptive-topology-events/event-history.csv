@@ -1,0 +1,5 @@
+attempt,action,start_parameter,target_parameter,continuation_parameter,solver_load_factor,augmentation,batch,event,kind,interface,entity,left_newton_fraction,event_newton_fraction,right_newton_fraction,selected_newton_fraction,selected_branch,path_values,detail
+1,cutback,0.0,0.75,0.75,1.0,0,0,0,pair_entry,0,0:0,0.29999999000000005,0.30000000000000004,0.30000001000000004,0.30000001000000004,right,tool_x=0.059999999999999998;tool_z=-0.089999999999999997,scripted adaptive topology transition
+2,accepted,0.0,0.375,0.375,1.0,0,0,0,clipping_vertex_edge,0,0:0,0.39999999,0.4,0.40000001,0.40000001,right,tool_x=0.029999999999999999;tool_z=-0.044999999999999998,scripted adaptive topology transition
+3,accepted,0.375,0.75,0.75,1.0,0,0,0,pallet_transition,0,0:0,0.49999999,0.5,0.50000001,0.50000001,right,tool_x=0.059999999999999998;tool_z=-0.089999999999999997,scripted adaptive topology transition
+4,accepted,0.75,1.0,1.0,1.0,0,0,0,pressure_activation,0,0:0,0.59999999,0.6000000000000001,0.6000000100000001,0.6000000100000001,right,tool_x=0.080000000000000002;tool_z=-0.12,scripted adaptive topology transition
