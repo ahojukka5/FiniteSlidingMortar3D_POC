@@ -1,0 +1,33 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "nonlinear-equilibrium",
+  "source": "summary.json",
+  "profiles": ["full", "quick"],
+  "metrics": {
+    "direct_newton.iterations": {
+      "reference": 8,
+      "absolute": 0,
+      "relative": 0
+    },
+    "direct_newton.final_residual_norm": {
+      "reference": 0,
+      "absolute": 1e-10,
+      "relative": 0
+    },
+    "direct_newton.minimum_jacobian": {
+      "reference": 0.78,
+      "absolute": 1e-12,
+      "relative": 1e-12
+    },
+    "direct_newton.displacement_error": {
+      "reference": 0,
+      "absolute": 1e-12,
+      "relative": 0
+    },
+    "direct_newton.reaction_balance_norm": {
+      "reference": 0,
+      "absolute": 1e-10,
+      "relative": 0
+    }
+  }
+}

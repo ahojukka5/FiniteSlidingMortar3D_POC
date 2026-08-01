@@ -1,0 +1,23 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "scale-aware-penalty",
+  "source": "summary.json",
+  "profiles": ["full", "quick"],
+  "metrics": {
+    "metrics.normalized_target": {
+      "reference": 1e-6,
+      "absolute": 1e-18,
+      "relative": 1e-12
+    },
+    "metrics.interface_count": {
+      "reference": 2,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.updated_interface_count": {
+      "reference": 1,
+      "absolute": 0,
+      "relative": 0
+    }
+  }
+}
