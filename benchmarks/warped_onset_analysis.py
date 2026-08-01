@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 
 import numpy as np
@@ -76,7 +75,9 @@ def directional_tangent_error(
     }
 
 
-def _step_histories(result: object) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+def _step_histories(
+    result: object,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     step_rows: list[dict[str, object]] = []
     interface_rows: list[dict[str, object]] = []
     for step_index, step in enumerate(result.accepted_steps, start=1):
@@ -103,9 +104,12 @@ def _step_histories(result: object) -> tuple[list[dict[str, object]], list[dict[
                 "support_reaction_x": float(support_reaction[0]),
                 "support_reaction_y": float(support_reaction[1]),
                 "support_reaction_z": float(support_reaction[2]),
+                "reaction_norm": step.reaction_norm,
                 "global_reaction_balance": float(np.linalg.norm(reaction_balance)),
                 "free_residual": evaluation.free_residual_norm,
-                "normalized_residual": evaluation.free_residual_norm / step.result.scales.force,
+                "normalized_residual": (
+                    evaluation.free_residual_norm / step.result.scales.force
+                ),
                 "minimum_jacobian": evaluation.bulk.minimum_jacobian,
                 "maximum_penetration": contact.diagnostics.maximum_penetration,
                 "normalized_penetration": normalized.maximum_penetration,
@@ -114,7 +118,9 @@ def _step_histories(result: object) -> tuple[list[dict[str, object]], list[dict[
                 "overlap_area": raw.weights.total_area,
                 "partition_error": raw.weights.consistency_error,
                 "active_rows": int(np.count_nonzero(contact.signature.active_rows)),
-                "supported_rows": int(np.count_nonzero(contact.signature.supported_rows)),
+                "supported_rows": int(
+                    np.count_nonzero(contact.signature.supported_rows)
+                ),
                 "contact_event_restarts": sum(
                     value.contact_event_restarts for value in step.result.equilibria
                 ),
@@ -141,6 +147,7 @@ def _step_histories(result: object) -> tuple[list[dict[str, object]], list[dict[
                     "slave_row": row,
                     "normal_gap": float(gap),
                     "pressure": float(pressure),
+                    "multiplier": float(step.result.states[0].multipliers[row]),
                     "active": bool(active),
                     "supported": bool(supported),
                 }
@@ -148,7 +155,9 @@ def _step_histories(result: object) -> tuple[list[dict[str, object]], list[dict[
     return step_rows, interface_rows
 
 
-def _classified_steps(result: object) -> tuple[tuple[object, ...], tuple[object, ...]]:
+def _classified_steps(
+    result: object,
+) -> tuple[tuple[object, ...], tuple[object, ...]]:
     separated = tuple(
         step
         for step in result.accepted_steps
@@ -196,20 +205,22 @@ def _attempt_rows(result: object) -> list[dict[str, object]]:
     return [
         {
             "attempt": item.attempt,
-            "start_parameter": item.start_parameter,
-            "target_parameter": item.target_parameter,
+            "start_parameter": item.start_load_factor,
+            "target_parameter": item.target_load_factor,
+            "step_size": item.step_size,
             "action": item.action,
-            "reason": item.inner_termination_reason,
-            "newton_iterations": item.newton_iterations,
+            "inner_termination_reason": item.inner_termination_reason,
             "augmentations": item.augmentations,
+            "newton_iterations": item.newton_iterations,
             "contact_event_restarts": item.contact_event_restarts,
             "equilibrium_residual": item.equilibrium_residual,
-            "normalized_equilibrium_residual": item.normalized_equilibrium_residual,
             "maximum_penetration": item.maximum_penetration,
-            "normalized_maximum_penetration": item.normalized_maximum_penetration,
-            "penalties_before": json.dumps(item.penalties_before),
-            "penalties_after": json.dumps(item.penalties_after),
-            "penalty_update_reasons": json.dumps(item.penalty_update_reasons),
+            "effective_load_norm": item.effective_load_norm,
+            "reaction_norm": item.reaction_norm,
+            "penalties_before": item.penalties_before,
+            "penalties_after": item.penalties_after,
+            "prescribed_values": item.prescribed_values,
+            "penalty_update_reasons": item.penalty_update_reasons,
         }
         for item in result.attempts
     ]
