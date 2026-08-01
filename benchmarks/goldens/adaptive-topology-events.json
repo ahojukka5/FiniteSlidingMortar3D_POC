@@ -1,0 +1,43 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "adaptive-topology-events",
+  "source": "summary.json",
+  "profiles": ["full", "quick"],
+  "metrics": {
+    "metrics.attempts": {
+      "reference": 4,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.accepted_steps": {
+      "reference": 3,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.cutbacks": {
+      "reference": 1,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.event_batches": {
+      "reference": 4,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.atomic_events": {
+      "reference": 4,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.accepted_event_batches": {
+      "reference": 3,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.rejected_event_batches": {
+      "reference": 1,
+      "absolute": 0,
+      "relative": 0
+    }
+  }
+}

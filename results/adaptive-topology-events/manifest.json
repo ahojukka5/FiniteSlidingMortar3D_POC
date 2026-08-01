@@ -1,0 +1,107 @@
+{
+  "schema_version": "contact3d-benchmark/v1",
+  "benchmark": "adaptive-topology-events",
+  "provenance": {
+    "benchmark": "adaptive-topology-events",
+    "git_sha": "30a5f888d55592295f44d8090fd37056fd462720",
+    "python": {
+      "version": "3.12.12",
+      "implementation": "CPython",
+      "executable": "/home/juajukka/dev/FiniteSlidingMortar3D_POC/.venv/bin/python3"
+    },
+    "platform": {
+      "system": "Linux",
+      "release": "4.18.0-553.137.1.el8_10.x86_64",
+      "machine": "x86_64"
+    },
+    "packages": {
+      "contact3d": "0.1.0",
+      "numpy": "2.5.1",
+      "scipy": "1.18.0"
+    },
+    "seed": 0,
+    "solver_settings": {
+      "path": "scripted mixed displacement path",
+      "adaptive": {
+        "load": {
+          "initial_step": 0.75,
+          "minimum_step": 0.1,
+          "maximum_step": 0.75,
+          "cutback_factor": 0.5,
+          "growth_factor": 1.5,
+          "easy_newton_iterations": 0,
+          "maximum_attempts": 100
+        },
+        "penalty": {
+          "enabled": false,
+          "increase_factor": 4.0,
+          "maximum_penalty": 1000000000.0,
+          "maximum_updates_per_step": 4,
+          "penetration_target": null,
+          "normalized_penetration_target": null,
+          "interface_local": true,
+          "minimum_scale_factor": 0.25,
+          "maximum_scale_factor": 10000.0
+        },
+        "augmented": {
+          "maximum_augmentations": 12,
+          "gap_tolerance": 1e-08,
+          "complementarity_tolerance": 1e-08,
+          "projection_tolerance": 1e-08,
+          "multiplier_tolerance": 1e-08,
+          "event_policy": "restart",
+          "newton": {
+            "maximum_iterations": 30,
+            "absolute_tolerance": 1e-10,
+            "relative_tolerance": 1e-10,
+            "armijo_coefficient": 0.0001,
+            "line_search_reduction": 0.5,
+            "minimum_step": 9.5367431640625e-07,
+            "maximum_line_search_iterations": 24,
+            "linear_solver": {
+              "backend": "dense",
+              "preconditioner": "none",
+              "relative_tolerance": 1e-10,
+              "absolute_tolerance": 0.0,
+              "maximum_iterations": 500,
+              "restart": 50,
+              "dense_threshold": 96,
+              "ilu_drop_tolerance": 0.0001,
+              "ilu_fill_factor": 10.0,
+              "preconditioner_factory": null
+            }
+          }
+        },
+        "scaling": {
+          "enabled": false,
+          "equilibrium_tolerance": 1e-10,
+          "gap_tolerance": 1e-08,
+          "complementarity_tolerance": 1e-08,
+          "projection_tolerance": 1e-08,
+          "multiplier_tolerance": 1e-08
+        }
+      },
+      "event_branch": "right"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "continuation-events.svg",
+      "kind": "svg"
+    },
+    {
+      "path": "event-history.csv",
+      "kind": "csv",
+      "schema": "contact3d-adaptive-topology-event-history/v1"
+    },
+    {
+      "path": "events-per-attempt.svg",
+      "kind": "svg"
+    },
+    {
+      "path": "summary.json",
+      "kind": "json",
+      "schema": "contact3d-adaptive-topology-events/v1"
+    }
+  ]
+}
