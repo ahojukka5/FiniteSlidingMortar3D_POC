@@ -1,0 +1,18 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "topology-events",
+  "source": "summary.json",
+  "profiles": ["full", "quick"],
+  "metrics": {
+    "metrics.event_rows": {
+      "reference": 32,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.maximum_subdivision_error": {
+      "reference": 0,
+      "absolute": 1e-10,
+      "relative": 0
+    }
+  }
+}

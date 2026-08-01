@@ -1,0 +1,48 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "mixed-load-path",
+  "source": "summary.json",
+  "profiles": ["full", "quick"],
+  "metrics": {
+    "metrics.accepted_steps": {
+      "reference": 3,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.cutbacks": {
+      "reference": 1,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.attempts": {
+      "reference": 4,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.final_parameter": {
+      "reference": 1,
+      "absolute": 0,
+      "relative": 0
+    },
+    "metrics.final_tool_z": {
+      "reference": -0.12,
+      "absolute": 1e-14,
+      "relative": 0
+    },
+    "metrics.final_tool_x": {
+      "reference": 0.02,
+      "absolute": 1e-14,
+      "relative": 0
+    },
+    "metrics.final_effective_load_norm": {
+      "reference": 3.605551275463989,
+      "absolute": 1e-12,
+      "relative": 1e-12
+    },
+    "metrics.final_reaction_norm": {
+      "reference": 122.37646832622684,
+      "absolute": 1e-10,
+      "relative": 1e-12
+    }
+  }
+}

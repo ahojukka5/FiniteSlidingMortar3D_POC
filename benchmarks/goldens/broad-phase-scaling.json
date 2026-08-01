@@ -1,0 +1,23 @@
+{
+  "schema_version": "contact3d-golden-metrics/v1",
+  "benchmark": "broad-phase-scaling",
+  "source": "summary.json",
+  "profiles": ["full"],
+  "metrics": {
+    "metrics.largest_tested_fraction": {
+      "reference": 0.2734375,
+      "absolute": 1e-15,
+      "relative": 1e-14
+    },
+    "metrics.smallest_tested_fraction": {
+      "reference": 0.03194625289351852,
+      "absolute": 1e-15,
+      "relative": 1e-14
+    },
+    "metrics.facet_test_growth_exponent": {
+      "reference": 1.2239005643986407,
+      "absolute": 1e-12,
+      "relative": 1e-12
+    }
+  }
+}
