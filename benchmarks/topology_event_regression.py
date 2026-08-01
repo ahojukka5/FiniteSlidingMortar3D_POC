@@ -12,6 +12,7 @@ from xml.etree import ElementTree
 import numpy as np
 
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+from contact3d.benchmark_plots import write_category_timeline, write_line_chart
 from contact3d.topology_events import (
     ContactTopologyStateMachine,
     TopologyObservation,
@@ -79,72 +80,6 @@ def _crossings(subdivisions: int) -> list[dict[str, object]]:
                 raise RuntimeError("event localization did not advance the segment")
             left = batch.selected
     return rows
-
-
-def _write_timeline(path: Path, rows: list[dict[str, object]]) -> None:
-    width, height = 820, 360
-    left, right, top, bottom = 72, 32, 48, 54
-    kinds = sorted({str(row["kind"]) for row in rows})
-    y_lookup = {kind: top + index * 42 for index, kind in enumerate(kinds)}
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width/2}" y="26" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Localized topology events</text>'
-        ),
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    for kind, y in y_lookup.items():
-        lines.append(
-            f'<text x="{left-8}" y="{y+4}" text-anchor="end" '
-            f'font-family="monospace" font-size="10">{kind}</text>'
-        )
-    for row in rows:
-        x = left + float(row["event_fraction"]) * (width - left - right)
-        y = y_lookup[str(row["kind"])]
-        radius = 5 if int(row["subdivisions"]) == 5 else 3
-        lines.append(
-            f'<circle cx="{x:.3f}" cy="{y:.3f}" r="{radius}" '
-            'fill="none" stroke="black"/>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def _write_error(path: Path, errors: list[dict[str, object]]) -> None:
-    width, height = 760, 420
-    left, right, top, bottom = 76, 30, 44, 62
-    maximum = max((float(row["maximum_error"]) for row in errors), default=1.0e-16)
-    maximum = max(maximum, 1.0e-16)
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width/2}" y="26" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Subdivision invariance</text>'
-        ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    for index, row in enumerate(errors):
-        subdivisions = int(row["subdivisions"])
-        error = float(row["maximum_error"])
-        x = left + (index + 1) * (width - left - right) / (len(errors) + 1)
-        y = height - bottom - error / maximum * (height - top - bottom)
-        lines.append(f'<circle cx="{x:.3f}" cy="{y:.3f}" r="4" fill="black"/>')
-        lines.append(
-            f'<text x="{x:.3f}" y="{height-bottom+20}" text-anchor="middle" '
-            f'font-family="monospace" font-size="10">{subdivisions}</text>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def run(output: Path) -> dict[str, object]:
@@ -217,8 +152,29 @@ def run(output: Path) -> dict[str, object]:
         error_rows,
         schema="contact3d-topology-subdivision-errors/v1",
     )
-    _write_timeline(output / "event-timeline.svg", rows)
-    _write_error(output / "subdivision-error.svg", error_rows)
+    write_category_timeline(
+        output / "event-timeline.svg",
+        title="Localized topology events",
+        x_label="path fraction",
+        categories=tuple(str(row["kind"]) for row in rows),
+        x_values=np.asarray([float(row["event_fraction"]) for row in rows]),
+        groups=tuple(int(row["subdivisions"]) for row in rows),
+        emphasized_group=subdivision_counts[0],
+    )
+    write_line_chart(
+        output / "subdivision-error.svg",
+        title="Subdivision invariance",
+        x_label="path subdivisions",
+        y_label="maximum event-location error",
+        x_values=np.asarray([float(row["subdivisions"]) for row in error_rows]),
+        series=(
+            (
+                np.asarray([float(row["maximum_error"]) for row in error_rows]),
+                "maximum error",
+            ),
+        ),
+        show_markers=True,
+    )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
         artifacts.register(path.name, "svg")
