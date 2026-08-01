@@ -43,6 +43,10 @@ from .scaling import (
     coupled_problem_scales,
     propose_interface_penalties,
 )
+from .staged_rigid_path import (
+    RigidBodyMotionSegment,
+    StagedRigidBodyBoundaryPath,
+)
 
 __all__ = [
     "AdaptiveAcceptedStep",
@@ -64,10 +68,12 @@ __all__ = [
     "PenaltyUpdateDecision",
     "PenaltyUpdatePlan",
     "RigidBodyBoundaryPath",
+    "RigidBodyMotionSegment",
     "ScaleAwareAugmentationIteration",
     "ScaleAwareAugmentedContactResult",
     "ScaleAwareConvergenceOptions",
     "ScaleAwareNewtonIteration",
+    "StagedRigidBodyBoundaryPath",
     "contact_interface_scales",
     "contact_penalties",
     "coupled_problem_scales",
