@@ -13,6 +13,11 @@ from contact3d.benchmark_artifacts import (
     BENCHMARK_SCHEMA_VERSION,
     validate_benchmark_manifest,
 )
+from contact3d.benchmark_goldens import (
+    GOLDEN_SCHEMA_VERSION,
+    evaluate_golden_spec,
+    load_golden_directory,
+)
 
 BENCHMARKS = {
     "tet4-patch": "tet4_patch.py",
@@ -48,14 +53,30 @@ QUICK_ARGUMENTS = {
     ),
 }
 
+GOLDEN_SUITE_SCHEMA_VERSION = "contact3d-golden-suite/v1"
+
+
+def _not_configured_report(name: str, profile: str) -> dict[str, object]:
+    return {
+        "schema_version": GOLDEN_SCHEMA_VERSION,
+        "benchmark": name,
+        "source": None,
+        "profile": profile,
+        "status": "not_configured",
+        "metric_count": 0,
+        "metrics": {},
+    }
+
 
 def run(
     output: Path,
     benchmarks: tuple[str, ...] | None = None,
     *,
     quick: bool = False,
+    verify_goldens: bool = True,
+    golden_directory: Path | None = None,
 ) -> dict[str, object]:
-    """Execute selected standardized benchmarks and validate their manifests."""
+    """Execute selected benchmarks and validate manifests and golden metrics."""
 
     root = Path(__file__).resolve().parent
     selected = tuple(BENCHMARKS) if benchmarks is None else benchmarks
@@ -64,8 +85,15 @@ def run(
     unknown = sorted(set(selected) - set(BENCHMARKS))
     if unknown:
         raise ValueError("unknown benchmark names: " + ", ".join(unknown))
+    profile = "quick" if quick else "full"
+    specifications = {}
+    if verify_goldens:
+        directory = root / "goldens" if golden_directory is None else golden_directory
+        specifications = load_golden_directory(directory)
+
     output.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
+    golden_reports: list[dict[str, object]] = []
     for name in selected:
         destination = output / name
         command = [
@@ -89,6 +117,19 @@ def run(
             )
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         validate_benchmark_manifest(manifest, root=destination)
+
+        if not verify_goldens:
+            golden_report = _not_configured_report(name, profile)
+            golden_report["status"] = "disabled"
+        elif name in specifications:
+            golden_report = evaluate_golden_spec(
+                specifications[name],
+                destination,
+                profile=profile,
+            )
+        else:
+            golden_report = _not_configured_report(name, profile)
+        golden_reports.append(golden_report)
         rows.append(
             {
                 "benchmark": name,
@@ -96,13 +137,39 @@ def run(
                 "git_sha": manifest["provenance"]["git_sha"],
                 "seed": manifest["provenance"]["seed"],
                 "manifest": str(manifest_path.relative_to(output)),
+                "golden_status": golden_report["status"],
+                "golden_metric_count": golden_report["metric_count"],
             }
         )
+
+    passed_reports = [
+        report for report in golden_reports if report["status"] == "passed"
+    ]
+    golden_summary: dict[str, object] = {
+        "schema_version": GOLDEN_SUITE_SCHEMA_VERSION,
+        "profile": profile,
+        "verification_enabled": verify_goldens,
+        "configured_benchmarks": len(specifications),
+        "evaluated_benchmarks": len(passed_reports),
+        "evaluated_metrics": sum(
+            int(report["metric_count"]) for report in passed_reports
+        ),
+        "reports": golden_reports,
+    }
+    golden_path = output / "golden-regressions.json"
+    golden_path.write_text(
+        json.dumps(golden_summary, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
     summary: dict[str, object] = {
         "schema_version": BENCHMARK_SCHEMA_VERSION,
         "suite": "standardized-benchmarks",
-        "profile": "quick" if quick else "full",
+        "profile": profile,
         "benchmark_count": len(rows),
+        "golden_report": golden_path.name,
+        "golden_evaluated_benchmarks": len(passed_reports),
+        "golden_evaluated_metrics": golden_summary["evaluated_metrics"],
         "benchmarks": rows,
     }
     (output / "suite-summary.json").write_text(
@@ -131,11 +198,27 @@ def main() -> None:
         action="store_true",
         help="use bounded smoke settings for expensive scaling benchmarks",
     )
+    parser.add_argument(
+        "--golden-dir",
+        type=Path,
+        help="read checked metric specifications from this directory",
+    )
+    parser.add_argument(
+        "--skip-goldens",
+        action="store_true",
+        help="run benchmarks without checked numeric golden verification",
+    )
     arguments = parser.parse_args()
     selected = None if arguments.benchmarks is None else tuple(arguments.benchmarks)
     print(
         json.dumps(
-            run(arguments.output, selected, quick=arguments.quick),
+            run(
+                arguments.output,
+                selected,
+                quick=arguments.quick,
+                verify_goldens=not arguments.skip_goldens,
+                golden_directory=arguments.golden_dir,
+            ),
             indent=2,
         )
     )

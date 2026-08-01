@@ -44,6 +44,23 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
     assert summary["profile"] == "quick"
     assert summary["benchmark_count"] == len(expected)
     assert {row["benchmark"] for row in summary["benchmarks"]} == expected
+    assert summary["golden_evaluated_benchmarks"] == 4
+    assert summary["golden_evaluated_metrics"] == 18
+
+    golden = json.loads(
+        (output / summary["golden_report"]).read_text(encoding="utf-8")
+    )
+    statuses = {row["benchmark"]: row["status"] for row in golden["reports"]}
+    assert golden["verification_enabled"]
+    assert golden["configured_benchmarks"] == 5
+    assert golden["evaluated_benchmarks"] == 4
+    assert golden["evaluated_metrics"] == 18
+    assert statuses["nonlinear-equilibrium"] == "passed"
+    assert statuses["mixed-load-path"] == "passed"
+    assert statuses["scale-aware-penalty"] == "passed"
+    assert statuses["topology-events"] == "passed"
+    assert statuses["broad-phase-scaling"] == "skipped_profile"
+    assert statuses["linear-solver-scaling"] == "not_configured"
 
     for name in expected:
         directory = output / name
