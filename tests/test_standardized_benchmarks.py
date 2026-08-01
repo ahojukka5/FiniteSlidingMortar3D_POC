@@ -32,6 +32,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "nonlinear-equilibrium",
         "coupled-mortar-patch",
         "adaptive-contact-policy",
+        "adaptive-topology-events",
         "mixed-load-path",
         "mixed-contact-onset",
         "scale-aware-penalty",
@@ -44,18 +45,19 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
     assert summary["profile"] == "quick"
     assert summary["benchmark_count"] == len(expected)
     assert {row["benchmark"] for row in summary["benchmarks"]} == expected
-    assert summary["golden_evaluated_benchmarks"] == 4
-    assert summary["golden_evaluated_metrics"] == 18
+    assert summary["golden_evaluated_benchmarks"] == 5
+    assert summary["golden_evaluated_metrics"] == 25
 
     golden = json.loads(
         (output / summary["golden_report"]).read_text(encoding="utf-8")
     )
     statuses = {row["benchmark"]: row["status"] for row in golden["reports"]}
     assert golden["verification_enabled"]
-    assert golden["configured_benchmarks"] == 5
-    assert golden["evaluated_benchmarks"] == 4
-    assert golden["evaluated_metrics"] == 18
+    assert golden["configured_benchmarks"] == 6
+    assert golden["evaluated_benchmarks"] == 5
+    assert golden["evaluated_metrics"] == 25
     assert statuses["nonlinear-equilibrium"] == "passed"
+    assert statuses["adaptive-topology-events"] == "passed"
     assert statuses["mixed-load-path"] == "passed"
     assert statuses["scale-aware-penalty"] == "passed"
     assert statuses["topology-events"] == "passed"
@@ -72,6 +74,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         assert manifest["artifacts"]
 
     summary_schemas = {
+        "adaptive-topology-events": "contact3d-adaptive-topology-events/v1",
         "mixed-load-path": "contact3d-mixed-load-path/v1",
         "mixed-contact-onset": "contact3d-mixed-contact-onset/v1",
         "scale-aware-penalty": "contact3d-scale-aware-penalty/v1",
@@ -87,6 +90,20 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
             (output / name / "summary.json").read_text(encoding="utf-8")
         )
         assert payload["schema_version"] == schema
+
+    adaptive_events = json.loads(
+        (output / "adaptive-topology-events" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert adaptive_events["metrics"]["all_right_branch"]
+    assert adaptive_events["metrics"]["continuation_parameters"] == [
+        0.75,
+        0.375,
+        0.75,
+        1.0,
+    ]
+    assert adaptive_events["metrics"]["solver_load_factors"] == [1.0] * 4
 
     linear = json.loads(
         (output / "linear-solver-scaling" / "summary.json").read_text(

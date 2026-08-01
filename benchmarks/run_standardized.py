@@ -24,6 +24,7 @@ BENCHMARKS = {
     "nonlinear-equilibrium": "nonlinear_equilibrium.py",
     "coupled-mortar-patch": "coupled_mortar_patch.py",
     "adaptive-contact-policy": "adaptive_policy_regression.py",
+    "adaptive-topology-events": "adaptive_event_regression.py",
     "mixed-load-path": "mixed_path_regression.py",
     "mixed-contact-onset": "mixed_contact_onset.py",
     "scale-aware-penalty": "scale_aware_penalty_regression.py",
