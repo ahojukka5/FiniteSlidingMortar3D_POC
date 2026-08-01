@@ -62,6 +62,9 @@ current standardized suite uses:
 - `contact3d-adaptive-policy/v1` for the adaptive-controller summary;
 - `contact3d-adaptive-attempts/v1` for accepted, cut-back, and penalty-escalated attempts;
 - `contact3d-adaptive-accepted-steps/v1` for the committed controller path;
+- `contact3d-adaptive-topology-events/v1` for adaptive mixed-path event propagation;
+- `contact3d-adaptive-topology-event-history/v1` for absolute path targets, local Newton
+  fractions, attempt actions, and atomic event records;
 - `contact3d-mixed-load-path/v1` for the deterministic mixed-boundary regression summary;
 - `contact3d-mixed-path-steps/v1` for committed mixed-boundary path states and reactions;
 - `contact3d-continuation-attempts/v1` for reusable continuation retry and update records;
@@ -169,8 +172,9 @@ deterministic output. The public helpers cover:
 imported `write_line_chart` or `write_sparsity` from the benchmark directory. New code should
 import the package-level module directly.
 
-The topology-event, BVH-scaling, mixed-path, scale-aware, warped-adapter, and warped-onset
-families now use the shared helpers instead of maintaining duplicate SVG coordinate logic.
+The topology-event, adaptive-event, BVH-scaling, mixed-path, scale-aware, warped-adapter, and
+warped-onset families use the shared helpers instead of maintaining duplicate SVG coordinate
+logic.
 
 ## Numeric regression checks
 
@@ -214,9 +218,10 @@ Stable metric selections are stored in `benchmarks/goldens/*.json` using schema
 - a finite reference value;
 - explicit absolute and relative tolerances.
 
-The initial selections cover nonlinear equilibrium, the deterministic mixed path,
-scale-aware penalty control, topology-event localization, and the published full BVH scaling
-profile. Timing values and other machine-dependent measurements are deliberately excluded.
+The initial selections cover nonlinear equilibrium, deterministic mixed and adaptive event
+paths, scale-aware penalty control, topology-event localization, and the published full BVH
+scaling profile. Timing values and other machine-dependent measurements are deliberately
+excluded.
 
 `contact3d.benchmark_goldens` validates these files, rejects duplicate benchmark selections,
 and evaluates only specifications compatible with the active runner profile.
@@ -244,9 +249,9 @@ Run selected benchmarks by repeating `--benchmark` as needed:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
+  --benchmark adaptive-topology-events \
   --benchmark topology-events \
   --benchmark broad-phase-scaling \
-  --benchmark linear-solver-scaling \
   --output results/standardized-benchmarks
 ```
 
@@ -254,12 +259,13 @@ Use `--golden-dir PATH` to evaluate another reviewed specification set. Use
 `--skip-goldens` only when regenerating exploratory output that is intentionally not a
 regression run.
 
-The runner covers twelve families:
+The runner covers thirteen families:
 
 - `tet4-patch`;
 - `nonlinear-equilibrium`;
 - `coupled-mortar-patch`;
 - `adaptive-contact-policy`;
+- `adaptive-topology-events`;
 - `mixed-load-path`;
 - `mixed-contact-onset`;
 - `scale-aware-penalty`;
@@ -279,6 +285,12 @@ contains the full per-metric tolerance report.
 The topology benchmark records every event kind, entity, left/event/right fractions, selected
 fraction, and selected branch at four path subdivisions. `subdivision-errors.csv` compares
 each path against the finest event locations.
+
+The adaptive event benchmark records the continuation attempt and action, absolute start and
+target path parameters, named mixed-path values, solver load factor, augmentation index, local
+Newton event bracket, selected branch, and atomic event detail. Its timeline is plotted against
+the absolute continuation target while a separate chart shows event counts for accepted and
+rejected attempts.
 
 The BVH benchmark records tree nodes, node visits, exact facet tests, quadratic oracle tests,
 accepted pairs, tested fraction, build/refit/query timings, and pair-set equality for every
