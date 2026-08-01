@@ -16,6 +16,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         [
             sys.executable,
             str(repository / "benchmarks" / "run_standardized.py"),
+            "--quick",
             "--output",
             str(output),
         ],
@@ -36,7 +37,11 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "scale-aware-penalty",
         "warped-nonmatching-adapter",
         "warped-nonmatching-contact-onset",
+        "topology-events",
+        "broad-phase-scaling",
+        "linear-solver-scaling",
     }
+    assert summary["profile"] == "quick"
     assert summary["benchmark_count"] == len(expected)
     assert {row["benchmark"] for row in summary["benchmarks"]} == expected
 
@@ -56,12 +61,37 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "warped-nonmatching-contact-onset": (
             "contact3d-warped-contact-onset/v1"
         ),
+        "topology-events": "contact3d-topology-events/v1",
+        "broad-phase-scaling": "contact3d-broad-phase-scaling/v1",
+        "linear-solver-scaling": "contact3d-linear-solver-scaling/v1",
     }
     for name, schema in summary_schemas.items():
         payload = json.loads(
             (output / name / "summary.json").read_text(encoding="utf-8")
         )
         assert payload["schema_version"] == schema
+
+    linear = json.loads(
+        (output / "linear-solver-scaling" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert linear["acceptance"]["passed"]
+    assert linear["settings"]["minimum_free_dofs"] == 0
+
+    broad_phase = json.loads(
+        (output / "broad-phase-scaling" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert broad_phase["metrics"]["all_pair_sets_equal"]
+
+    topology = json.loads(
+        (output / "topology-events" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert topology["metrics"]["branch_selection"] == "right"
 
     vtk_files = (
         output / "tet4-patch" / "affine-patch.vtu",
