@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from contact3d import solve_adaptive_contact_path
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 
 try:
     from .warped_onset_analysis import collect_histories
@@ -27,16 +28,26 @@ def run(output: Path) -> dict[str, object]:
 
     output.mkdir(parents=True, exist_ok=True)
     benchmark = model()
+    settings = options()
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "warped-nonmatching-contact-onset",
+        seed=2711,
+        solver_settings={"path": benchmark.path, "adaptive": settings},
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     result = solve_adaptive_contact_path(
         benchmark.problem,
         1.0,
         path=benchmark.path,
-        options=options(),
+        options=settings,
     )
     if not result.converged:
-        raise RuntimeError(f"warped contact-onset path failed: {result.termination_reason}")
+        raise RuntimeError(
+            f"warped contact-onset path failed: {result.termination_reason}"
+        )
     histories = collect_histories(result)
-    return write_results(output, benchmark, result, histories)
+    return write_results(artifacts, benchmark, result, histories)
 
 
 def main() -> None:
