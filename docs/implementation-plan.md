@@ -79,6 +79,7 @@ Completed:
 - transactional normal-penalty escalation after under-resolved augmentations;
 - explicit attempt histories proving rollback across failed candidates;
 - immutable prescribed-displacement, dead-load, and mixed continuation paths;
+- axis-angle rigid-body boundary paths with pivot translation and fixed-constraint retention;
 - complete boundary-state rollback across cutbacks and penalty retries;
 - fixed symbolic CSR reuse when only boundary values and loads change;
 - constrained reaction vectors for every accepted path state;
@@ -110,7 +111,7 @@ Completed:
 - coupled bulk/contact sparse assembly and contact-event restart policies;
 - outer augmented-Lagrange iteration with per-interface KKT stopping criteria;
 - adaptive continuation controller with load cutback and penalty retries;
-- proportional and mixed boundary/load-path benchmark infrastructure;
+- proportional, mixed, and rigid-body boundary/load-path infrastructure;
 - separated matching-interface contact-onset benchmark harness;
 - scale-aware interface-local penalty control;
 - scale-aware two-interface penalty policy and unit-conversion regression;

@@ -37,6 +37,53 @@ physical force vector. Convenience constructors provide:
 Explicit endpoint objects remain available when some prescribed values must stay fixed
 while others evolve.
 
+## Rigid-body boundary motion
+
+`RigidBodyBoundaryPath` prescribes all three displacement components of selected mesh nodes
+from an interpolated axis-angle transform. For reference position `X`, pivot `c`, pivot
+translation `t(s)`, normalized axis `a`, and angle `theta(s)`, the prescribed current
+position is
+
+```text
+x_bar(X, s) = c + t(s) + R(a, theta(s)) (X - c).
+```
+
+The path therefore imposes
+
+```text
+u_bar(X, s) = x_bar(X, s) - X
+```
+
+without replacing unrelated fixed constraints. Both translation and angle are interpolated
+linearly between their start and end values. The dead-load endpoint is interpolated in the
+same way and the inner solver load factor remains one.
+
+The `from_problem` factory expects every controlled node to be fully constrained in the
+template problem. It removes those controlled DOFs from the fixed subset and obtains their
+reference coordinates directly from the mesh. A caller can retain a constant existing dead
+load or request proportional loading from zero.
+
+```python
+path = RigidBodyBoundaryPath.from_problem(
+    problem,
+    controlled_nodes=np.array([13, 14, 15, 16]),
+    pivot=np.array([0.5, 0.5, 2.0]),
+    axis=np.array([0.0, 0.0, 1.0]),
+    end_angle=np.pi / 2.0,
+    end_translation=np.array([0.0, 0.0, -0.08]),
+)
+```
+
+Every path state records `rotation_angle`, `translation_x`, `translation_y`, and
+`translation_z`. Additional `LinearPathValue` records can describe benchmark phases or tool
+coordinates without reconstructing the transform afterward. `controlled_displacements(s)`
+provides the exact nodal values independently of problem construction for verification and
+visualization.
+
+This path is the kinematic foundation for the rotating-blocks and concentric-spheres
+benchmarks. It keeps rigid boundary motion out of benchmark-specific interpolation code and
+makes load-step refinement compare the same geometric path.
+
 ## Fixed sparsity
 
 `with_coupled_boundary_data` copies the immutable coupled problem and replaces only its
@@ -45,8 +92,7 @@ valid because the symbolic pattern depends on the bulk mesh and mapped contact D
 on prescribed values or force magnitudes.
 
 Penalty changes may still create an equivalent problem through the existing penalty
-replacement path. Issue #16 will formalize that interface and make interface-local penalty
-updates reuse the same symbolic data as well.
+replacement path. Interface-local penalty updates retain the same symbolic data.
 
 ## Transactional continuation
 
@@ -91,5 +137,5 @@ and final recovery of the requested endpoint. It does not claim a new mechanics 
 blocks at a known initial separation, drives the upper block by proportional prescribed
 translation while simultaneously increasing a dead load, and records first contact,
 reactions, KKT quantities, and pressure. Its matching frozen mortar operator isolates the
-new path semantics. Issue #17 replaces that oracle with the complete warped nonmatching
-moving-overlap production interface.
+new path semantics. The warped nonmatching production-onset benchmark exercises the complete
+moving-overlap interface.
