@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +11,7 @@ from xml.etree import ElementTree
 
 import numpy as np
 
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.topology_events import (
     ContactTopologyStateMachine,
     TopologyObservation,
@@ -81,13 +81,6 @@ def _crossings(subdivisions: int) -> list[dict[str, object]]:
     return rows
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def _write_timeline(path: Path, rows: list[dict[str, object]]) -> None:
     width, height = 820, 360
     left, right, top, bottom = 72, 32, 48, 54
@@ -122,10 +115,10 @@ def _write_timeline(path: Path, rows: list[dict[str, object]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _write_error(path: Path, errors: list[tuple[int, float]]) -> None:
+def _write_error(path: Path, errors: list[dict[str, object]]) -> None:
     width, height = 760, 420
     left, right, top, bottom = 76, 30, 44, 62
-    maximum = max((value for _, value in errors), default=1.0e-16)
+    maximum = max((float(row["maximum_error"]) for row in errors), default=1.0e-16)
     maximum = max(maximum, 1.0e-16)
     lines = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
@@ -140,7 +133,9 @@ def _write_error(path: Path, errors: list[tuple[int, float]]) -> None:
             f'y2="{height-bottom}" stroke="black"/>'
         ),
     ]
-    for index, (subdivisions, error) in enumerate(errors):
+    for index, row in enumerate(errors):
+        subdivisions = int(row["subdivisions"])
+        error = float(row["maximum_error"])
         x = left + (index + 1) * (width - left - right) / (len(errors) + 1)
         y = height - bottom - error / maximum * (height - top - bottom)
         lines.append(f'<circle cx="{x:.3f}" cy="{y:.3f}" r="4" fill="black"/>')
@@ -155,15 +150,25 @@ def _write_error(path: Path, errors: list[tuple[int, float]]) -> None:
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     subdivision_counts = (5, 10, 20, 40)
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "topology-events",
+        seed=0,
+        solver_settings={
+            "subdivision_counts": subdivision_counts,
+            "expected_locations": _EVENT_LOCATIONS,
+            "selected_branch": "right",
+        },
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     rows = [row for count in subdivision_counts for row in _crossings(count)]
-    _write_csv(output / "event-history.csv", rows)
 
     reference = {
         str(row["kind"]): float(row["event_fraction"])
         for row in rows
         if int(row["subdivisions"]) == subdivision_counts[-1]
     }
-    errors: list[tuple[int, float]] = []
+    error_rows: list[dict[str, object]] = []
     for count in subdivision_counts:
         values = {
             str(row["kind"]): float(row["event_fraction"])
@@ -171,25 +176,61 @@ def run(output: Path) -> dict[str, object]:
             if int(row["subdivisions"]) == count
         }
         shared = sorted(set(reference) & set(values))
-        error = max((abs(values[kind] - reference[kind]) for kind in shared), default=0.0)
-        errors.append((count, error))
+        error = max(
+            (abs(values[kind] - reference[kind]) for kind in shared),
+            default=0.0,
+        )
+        error_rows.append(
+            {
+                "subdivisions": count,
+                "shared_event_kinds": len(shared),
+                "maximum_error": error,
+            }
+        )
 
     metrics = {
         "subdivision_counts": list(subdivision_counts),
         "event_rows": len(rows),
-        "maximum_subdivision_error": max(value for _, value in errors),
+        "maximum_subdivision_error": max(
+            float(row["maximum_error"]) for row in error_rows
+        ),
         "branch_selection": "right",
         "localized_event_kinds": sorted({str(row["kind"]) for row in rows}),
     }
-    summary = {"metrics": metrics, "expected_locations": list(_EVENT_LOCATIONS)}
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    summary = {
+        "schema_version": "contact3d-topology-events/v1",
+        "metrics": metrics,
+        "expected_locations": list(_EVENT_LOCATIONS),
+    }
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-topology-events/v1",
+    )
+    artifacts.write_csv(
+        "event-history.csv",
+        rows,
+        schema="contact3d-topology-event-history/v1",
+    )
+    artifacts.write_csv(
+        "subdivision-errors.csv",
+        error_rows,
+        schema="contact3d-topology-subdivision-errors/v1",
     )
     _write_timeline(output / "event-timeline.svg", rows)
-    _write_error(output / "subdivision-error.svg", errors)
+    _write_error(output / "subdivision-error.svg", error_rows)
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "event-history.csv",
+            "subdivision-errors.csv",
+            "event-timeline.svg",
+            "subdivision-error.svg",
+        )
+    )
     return summary
 
 
