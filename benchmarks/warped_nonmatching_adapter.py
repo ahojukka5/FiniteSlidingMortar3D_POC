@@ -18,6 +18,7 @@ from contact3d import (
     build_facet_overlap,
 )
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+from contact3d.benchmark_plots import write_bar_chart, write_polygon_overlay
 
 
 def interface() -> MortarContactInterface:
@@ -76,92 +77,6 @@ def displacement() -> np.ndarray:
         ]
     )
     return values
-
-
-def write_pressure(path: Path, gaps: np.ndarray, pressure: np.ndarray) -> None:
-    width, height = 760, 420
-    left, right, top, bottom = 72, 28, 40, 68
-    plot_width = width - left - right
-    plot_height = height - top - bottom
-    maximum = max(float(np.max(pressure, initial=0.0)), 1.0)
-    bar_width = 0.5 * plot_width / len(pressure)
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width/2}" y="24" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Warped-interface pressure</text>'
-        ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    for node, (gap, value) in enumerate(zip(gaps, pressure, strict=True)):
-        center = left + (node + 0.5) * plot_width / len(pressure)
-        bar_height = value / maximum * plot_height
-        lines.extend(
-            [
-                (
-                    f'<rect x="{center-bar_width/2:.2f}" '
-                    f'y="{height-bottom-bar_height:.2f}" width="{bar_width:.2f}" '
-                    f'height="{bar_height:.2f}" fill="none" stroke="black"/>'
-                ),
-                (
-                    f'<text x="{center:.2f}" y="{height-bottom+22}" text-anchor="middle" '
-                    f'font-family="monospace" font-size="12">A{node}</text>'
-                ),
-                (
-                    f'<text x="{center:.2f}" y="{max(top+14, height-bottom-bar_height-6):.2f}" '
-                    f'text-anchor="middle" font-family="monospace" font-size="10">'
-                    f'p={value:.4g}, g={gap:.3g}</text>'
-                ),
-            ]
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def write_overlap(path: Path, polygons: list[tuple[np.ndarray, str]]) -> None:
-    width, height = 620, 620
-    margin = 56
-    points = np.vstack([polygon for polygon, _ in polygons])
-    lower = np.min(points, axis=0)
-    upper = np.max(points, axis=0)
-    span = np.maximum(upper - lower, 1.0e-12)
-    scale = min((width - 2 * margin) / span[0], (height - 2 * margin) / span[1])
-
-    def mapped(polygon: np.ndarray) -> str:
-        transformed = np.column_stack(
-            [
-                margin + scale * (polygon[:, 0] - lower[0]),
-                height - margin - scale * (polygon[:, 1] - lower[1]),
-            ]
-        )
-        closed = np.vstack([transformed, transformed[0]])
-        return " ".join(f"{x:.2f},{y:.2f}" for x, y in closed)
-
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width/2}" y="24" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Projected nonmatching overlaps</text>'
-        ),
-    ]
-    for index, (polygon, label) in enumerate(polygons):
-        dash = "" if index == 0 else ' stroke-dasharray="6,4"'
-        lines.append(
-            f'<polyline points="{mapped(polygon)}" fill="none" stroke="black" '
-            f'stroke-width="{2.5 if "intersection" in label else 1.2}"{dash}/>'
-        )
-        lines.append(
-            f'<text x="{width-24}" y="{48+18*index}" text-anchor="end" '
-            f'font-family="sans-serif" font-size="11">{label}</text>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _projected_area(polygon: np.ndarray) -> float:
@@ -289,9 +204,7 @@ def run(output: Path) -> dict[str, object]:
     projected_areas: list[float] = []
     for polygon, kind, pair_index in vtk_polygons:
         start = len(projected_points)
-        projected_points.extend(
-            np.column_stack([polygon, np.zeros(len(polygon))])
-        )
+        projected_points.extend(np.column_stack([polygon, np.zeros(len(polygon))]))
         projected_facets.append(np.arange(start, start + len(polygon), dtype=np.int64))
         region_kind.append(kind)
         pair_indices.append(pair_index)
@@ -306,8 +219,24 @@ def run(output: Path) -> dict[str, object]:
             "projected_area": np.asarray(projected_areas),
         },
     )
-    write_pressure(output / "interface-pressure.svg", base.normal_gaps, base.pressure)
-    write_overlap(output / "projected-overlap.svg", polygons)
+    write_bar_chart(
+        output / "interface-pressure.svg",
+        title="Warped-interface pressure",
+        y_label="pressure",
+        labels=tuple(f"A{node}" for node in range(len(base.pressure))),
+        values=base.pressure,
+        annotations=tuple(
+            f"p={pressure:.4g}, g={gap:.3g}"
+            for gap, pressure in zip(base.normal_gaps, base.pressure, strict=True)
+        ),
+    )
+    write_polygon_overlay(
+        output / "projected-overlap.svg",
+        title="Projected nonmatching overlaps",
+        polygons=polygons,
+        emphasized=tuple("intersection" in label for _, label in polygons),
+        dashed=tuple(index > 0 for index in range(len(polygons))),
+    )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
         artifacts.register(path.name, "svg")
