@@ -24,12 +24,36 @@ BENCHMARKS = {
     "scale-aware-penalty": "scale_aware_penalty_regression.py",
     "warped-nonmatching-adapter": "warped_nonmatching_adapter.py",
     "warped-nonmatching-contact-onset": "warped_nonmatching_contact_onset.py",
+    "topology-events": "topology_event_regression.py",
+    "broad-phase-scaling": "broad_phase_scaling.py",
+    "linear-solver-scaling": "linear_solver_scaling.py",
+}
+
+QUICK_ARGUMENTS = {
+    "broad-phase-scaling": (
+        "--subdivisions",
+        "4",
+        "8",
+        "12",
+    ),
+    "linear-solver-scaling": (
+        "--levels",
+        "1",
+        "2",
+        "--backends",
+        "dense",
+        "sparse_lu",
+        "--minimum-free-dofs",
+        "0",
+    ),
 }
 
 
 def run(
     output: Path,
     benchmarks: tuple[str, ...] | None = None,
+    *,
+    quick: bool = False,
 ) -> dict[str, object]:
     """Execute selected standardized benchmarks and validate their manifests."""
 
@@ -50,6 +74,8 @@ def run(
             "--output",
             str(destination),
         ]
+        if quick:
+            command.extend(QUICK_ARGUMENTS.get(name, ()))
         completed = subprocess.run(command, check=False)
         if completed.returncode != 0:
             raise RuntimeError(
@@ -75,6 +101,7 @@ def run(
     summary: dict[str, object] = {
         "schema_version": BENCHMARK_SCHEMA_VERSION,
         "suite": "standardized-benchmarks",
+        "profile": "quick" if quick else "full",
         "benchmark_count": len(rows),
         "benchmarks": rows,
     }
@@ -99,9 +126,19 @@ def main() -> None:
         dest="benchmarks",
         help="run only the selected benchmark; repeat to select several",
     )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="use bounded smoke settings for expensive scaling benchmarks",
+    )
     arguments = parser.parse_args()
     selected = None if arguments.benchmarks is None else tuple(arguments.benchmarks)
-    print(json.dumps(run(arguments.output, selected), indent=2))
+    print(
+        json.dumps(
+            run(arguments.output, selected, quick=arguments.quick),
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
