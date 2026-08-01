@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import time
 from pathlib import Path
@@ -13,6 +12,7 @@ from xml.etree import ElementTree
 
 import numpy as np
 
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.broad_phase import FacetAABBTree, facet_aabbs
 from contact3d.surface import (
     ContactSurface,
@@ -134,13 +134,6 @@ def _row(subdivisions: int) -> dict[str, object]:
     }
 
 
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def _scale(value: float, lower: float, upper: float, start: float, stop: float) -> float:
     if upper == lower:
         return 0.5 * (start + stop)
@@ -158,13 +151,23 @@ def _write_operation_plot(path: Path, rows: list[dict[str, object]]) -> None:
 
     def point(x: float, y: float) -> tuple[float, float]:
         return (
-            _scale(x, float(np.min(x_values)), float(np.max(x_values)), left, width - right),
+            _scale(
+                x,
+                float(np.min(x_values)),
+                float(np.max(x_values)),
+                left,
+                width - right,
+            ),
             _scale(y, ymin, ymax, height - bottom, top),
         )
 
-    bvh_points = [point(float(x), float(y)) for x, y in zip(x_values, bvh_values, strict=True)]
+    bvh_points = [
+        point(float(x), float(y))
+        for x, y in zip(x_values, bvh_values, strict=True)
+    ]
     brute_points = [
-        point(float(x), float(y)) for x, y in zip(x_values, brute_values, strict=True)
+        point(float(x), float(y))
+        for x, y in zip(x_values, brute_values, strict=True)
     ]
     lines = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
@@ -195,7 +198,10 @@ def _write_operation_plot(path: Path, rows: list[dict[str, object]]) -> None:
     for x, y in bvh_points:
         lines.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="black"/>')
     for x, y in brute_points:
-        lines.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="white" stroke="black"/>')
+        lines.append(
+            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="white" '
+            'stroke="black"/>'
+        )
     lines.append("</svg>")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -230,10 +236,32 @@ def _write_refit_plot(path: Path, rows: list[dict[str, object]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run(output: Path) -> dict[str, object]:
+def run(
+    output: Path,
+    *,
+    subdivisions: tuple[int, ...] = (8, 16, 24, 32),
+) -> dict[str, object]:
+    if len(subdivisions) < 2 or any(value <= 0 for value in subdivisions):
+        raise ValueError("subdivisions must contain at least two positive values")
+    if len(set(subdivisions)) != len(subdivisions):
+        raise ValueError("subdivision values must be unique")
+
     output.mkdir(parents=True, exist_ok=True)
-    rows = [_row(value) for value in (8, 16, 24, 32)]
-    _write_csv(output / "scaling.csv", rows)
+    levels = tuple(sorted(subdivisions))
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "broad-phase-scaling",
+        seed=0,
+        solver_settings={
+            "subdivisions": levels,
+            "search_distance": 0.04,
+            "build_repetitions": 5,
+            "refit_repetitions": 9,
+            "query_repetitions": 5,
+        },
+        repo_root=Path(__file__).resolve().parents[1],
+    )
+    rows = [_row(value) for value in levels]
 
     facet_counts = np.asarray([float(row["slave_facets"]) for row in rows])
     test_counts = np.asarray([float(row["facet_tests"]) for row in rows])
@@ -248,15 +276,34 @@ def run(output: Path) -> dict[str, object]:
             float(row["refit_to_build_ratio"]) for row in rows
         ),
     }
-    summary = {"metrics": metrics, "rows": rows}
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    summary = {
+        "schema_version": "contact3d-broad-phase-scaling/v1",
+        "metrics": metrics,
+        "rows": rows,
+    }
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-broad-phase-scaling/v1",
+    )
+    artifacts.write_csv(
+        "scaling.csv",
+        rows,
+        schema="contact3d-broad-phase-levels/v1",
     )
     _write_operation_plot(output / "operation-scaling.svg", rows)
     _write_refit_plot(output / "refit-cost.svg", rows)
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
+        artifacts.register(path.name, "svg")
+    artifacts.finalize(
+        required=(
+            "summary.json",
+            "scaling.csv",
+            "operation-scaling.svg",
+            "refit-cost.svg",
+        )
+    )
     return summary
 
 
@@ -267,8 +314,22 @@ def main() -> None:
         type=Path,
         default=Path("results/broad-phase-scaling"),
     )
+    parser.add_argument(
+        "--subdivisions",
+        type=int,
+        nargs="+",
+        default=[8, 16, 24, 32],
+    )
     arguments = parser.parse_args()
-    print(json.dumps(run(arguments.output)["metrics"], indent=2))
+    print(
+        json.dumps(
+            run(
+                arguments.output,
+                subdivisions=tuple(arguments.subdivisions),
+            )["metrics"],
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

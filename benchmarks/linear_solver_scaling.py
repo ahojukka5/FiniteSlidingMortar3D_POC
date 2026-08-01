@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 from xml.etree import ElementTree
@@ -13,6 +12,7 @@ import numpy as np
 from svg_plots import write_line_chart
 
 from contact3d import LinearSolverOptions, NewtonOptions, solve_coupled_equilibrium
+from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.verification_models import stacked_matching_block_contact_model
 
 _BACKENDS = ("dense", "sparse_lu", "gmres_ilu", "bicgstab_ilu")
@@ -55,15 +55,6 @@ def _newton_options(name: str) -> NewtonOptions:
         relative_tolerance=1.0e-9,
         linear_solver=_linear_options(name),
     )
-
-
-def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
-    if not rows:
-        raise ValueError(f"cannot write empty benchmark table: {path}")
-    with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def _run_row(
@@ -342,6 +333,7 @@ def run(
     layers: int = 2,
     indentation: float = 0.04,
     penalty: float = 6400.0,
+    minimum_free_dofs: int = 500,
 ) -> dict[str, object]:
     if not levels or any(level <= 0 for level in levels):
         raise ValueError("levels must contain positive resolutions")
@@ -351,14 +343,35 @@ def run(
         raise ValueError(f"backends must be selected from {_BACKENDS}")
     if "dense" not in backend_names or "sparse_lu" not in backend_names:
         raise ValueError("dense and sparse_lu are required benchmark oracles")
+    if minimum_free_dofs < 0:
+        raise ValueError("minimum_free_dofs must be nonnegative")
 
     output.mkdir(parents=True, exist_ok=True)
+    ordered_levels = tuple(sorted(levels))
+    settings = {
+        "levels": ordered_levels,
+        "layers": layers,
+        "indentation": indentation,
+        "penalty": penalty,
+        "backends": backend_names,
+        "minimum_free_dofs": minimum_free_dofs,
+        "newton_options": {
+            backend: _newton_options(backend) for backend in backend_names
+        },
+    }
+    artifacts = BenchmarkArtifactWriter(
+        output,
+        "linear-solver-scaling",
+        seed=0,
+        solver_settings=settings,
+        repo_root=Path(__file__).resolve().parents[1],
+    )
     summary_rows: list[dict[str, object]] = []
     iteration_rows: list[dict[str, object]] = []
     model_rows: list[dict[str, object]] = []
     results: dict[tuple[int, str], object] = {}
 
-    for resolution in sorted(levels):
+    for resolution in ordered_levels:
         model = stacked_matching_block_contact_model(
             resolution,
             layers=layers,
@@ -446,44 +459,74 @@ def run(
         "sparse_backends_materialized_dense": not sparse_without_dense,
         "sparse_backends_remained_sparse": sparse_without_dense,
         "largest_free_dofs": largest_free_dofs,
-        "medium_problem_threshold": 500,
-        "medium_problem_exercised": largest_free_dofs >= 500,
+        "minimum_free_dofs": minimum_free_dofs,
+        "minimum_problem_exercised": largest_free_dofs >= minimum_free_dofs,
     }
     acceptance["passed"] = all(
         (
             acceptance["all_requested_backends_converged"],
             acceptance["direct_backends_agree"],
             acceptance["sparse_backends_remained_sparse"],
-            acceptance["medium_problem_exercised"],
+            acceptance["minimum_problem_exercised"],
         )
     )
 
-    _write_csv(output / "models.csv", model_rows)
-    _write_csv(output / "backend-summary.csv", summary_rows)
-    _write_csv(output / "linear-iterations.csv", iteration_rows)
+    artifacts.write_csv(
+        "models.csv",
+        model_rows,
+        schema="contact3d-linear-solver-models/v1",
+    )
+    artifacts.write_csv(
+        "backend-summary.csv",
+        summary_rows,
+        schema="contact3d-linear-solver-runs/v1",
+    )
+    artifacts.write_csv(
+        "linear-iterations.csv",
+        iteration_rows,
+        schema="contact3d-linear-solver-iterations/v1",
+    )
     _plot_scaling(output, summary_rows, backend_names)
-    _plot_largest_histories(output, results, max(levels), backend_names)
+    _plot_largest_histories(output, results, max(ordered_levels), backend_names)
     for svg in output.glob("*.svg"):
         ElementTree.parse(svg)
+        artifacts.register(svg.name, "svg")
 
     summary = {
-        "schema_version": 1,
+        "schema_version": "contact3d-linear-solver-scaling/v1",
         "benchmark": "medium-coupled-linear-solver-scaling",
         "settings": {
-            "levels": sorted(levels),
+            "levels": list(ordered_levels),
             "layers": layers,
             "indentation": indentation,
             "penalty": penalty,
             "backends": list(backend_names),
+            "minimum_free_dofs": minimum_free_dofs,
         },
         "models": model_rows,
         "runs": summary_rows,
         "acceptance": acceptance,
     }
-    (output / "summary.json").write_text(
-        json.dumps(summary, indent=2) + "\n",
-        encoding="utf-8",
+    artifacts.write_json(
+        "summary.json",
+        summary,
+        schema="contact3d-linear-solver-scaling/v1",
     )
+    required = [
+        "summary.json",
+        "models.csv",
+        "backend-summary.csv",
+        "linear-iterations.csv",
+        "linear-solve-time.svg",
+        "linear-setup-time.svg",
+        "linear-iterations.svg",
+        "backend-agreement.svg",
+        "reduced-matrix-density.svg",
+    ]
+    required.extend(
+        f"largest-newton-history-{backend}.svg" for backend in backend_names
+    )
+    artifacts.finalize(required=required)
     if not acceptance["passed"]:
         raise RuntimeError(f"linear-solver benchmark acceptance failed: {acceptance}")
     return summary
@@ -500,6 +543,7 @@ def main() -> None:
     parser.add_argument("--layers", type=int, default=2)
     parser.add_argument("--indentation", type=float, default=0.04)
     parser.add_argument("--penalty", type=float, default=6400.0)
+    parser.add_argument("--minimum-free-dofs", type=int, default=500)
     parser.add_argument(
         "--backends",
         nargs="+",
@@ -514,6 +558,7 @@ def main() -> None:
         layers=arguments.layers,
         indentation=arguments.indentation,
         penalty=arguments.penalty,
+        minimum_free_dofs=arguments.minimum_free_dofs,
     )
     print(json.dumps(summary["acceptance"], indent=2))
 
