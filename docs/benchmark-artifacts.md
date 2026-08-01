@@ -76,7 +76,19 @@ current standardized suite uses:
   support, and activity;
 - `contact3d-directional-tangent-checks/v1` for smooth-state analytical/oracle checks;
 - `contact3d-contact-nodes/v1` for static slave-node gap, pressure, multiplier, support, and
-  activity.
+  activity;
+- `contact3d-topology-events/v1` for the synthetic topology-localization summary;
+- `contact3d-topology-event-history/v1` for typed localized events, brackets, selected
+  fractions, and derivative branches;
+- `contact3d-topology-subdivision-errors/v1` for path-subdivision invariance;
+- `contact3d-broad-phase-scaling/v1` for BVH equivalence and operation-scaling summaries;
+- `contact3d-broad-phase-levels/v1` for per-level tree, query, oracle, and timing data;
+- `contact3d-linear-solver-scaling/v1` for the medium coupled backend study;
+- `contact3d-linear-solver-models/v1` for mesh, DOF, sparsity, and reference-volume rows;
+- `contact3d-linear-solver-runs/v1` for backend agreement, timing, storage, contact, and
+  convergence summaries;
+- `contact3d-linear-solver-iterations/v1` for every Newton linear solve, including failed
+  solves.
 
 Later benchmark families can add compatible record schemas without changing the directory
 manifest version. The manifest version changes only when the outer contract itself changes.
@@ -173,24 +185,33 @@ Missing, nonnumeric, nonfinite, or out-of-tolerance metrics raise
 
 ## Standardized runner
 
-Run every migrated benchmark and validate all manifests with:
+Run every migrated benchmark with its published settings and validate all manifests with:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
   --output results/standardized-benchmarks
 ```
 
-Run one benchmark by repeating `--benchmark` as needed:
+The bounded quick profile keeps all benchmark families but uses smaller BVH and linear-solver
+levels. It is intended for integration checks, not publication evidence:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
-  --benchmark mixed-contact-onset \
-  --benchmark warped-nonmatching-contact-onset \
+  --quick \
+  --output results/standardized-benchmarks-quick
+```
+
+Run selected benchmarks by repeating `--benchmark` as needed:
+
+```bash
+uv run python benchmarks/run_standardized.py \
+  --benchmark topology-events \
+  --benchmark broad-phase-scaling \
+  --benchmark linear-solver-scaling \
   --output results/standardized-benchmarks
 ```
 
-The runner currently covers patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware,
-production-interface, and warped production-onset families:
+The runner covers twelve families:
 
 - `tet4-patch`;
 - `nonlinear-equilibrium`;
@@ -200,17 +221,38 @@ production-interface, and warped production-onset families:
 - `mixed-contact-onset`;
 - `scale-aware-penalty`;
 - `warped-nonmatching-adapter`;
-- `warped-nonmatching-contact-onset`.
+- `warped-nonmatching-contact-onset`;
+- `topology-events`;
+- `broad-phase-scaling`;
+- `linear-solver-scaling`.
 
 It writes `suite-summary.json` only after every subprocess succeeds and every manifest passes
-schema and file-completeness validation.
+schema and file-completeness validation. The summary records whether the run used the `full`
+or `quick` profile.
+
+## Event and scaling artifacts
+
+The topology benchmark records every event kind, entity, left/event/right fractions, selected
+fraction, and selected branch at four path subdivisions. `subdivision-errors.csv` compares
+each path against the finest event locations.
+
+The BVH benchmark records tree nodes, node visits, exact facet tests, quadratic oracle tests,
+accepted pairs, tested fraction, build/refit/query timings, and pair-set equality for every
+mesh level. The full profile uses subdivisions 8, 16, 24, and 32.
+
+The linear-solver benchmark records model sparsity, backend agreement, Newton and linear
+iterations, setup and solve timings, dense materializations, residuals, element Jacobians,
+penetration, pressure, active rows, and event restarts. Its full profile retains the
+500-free-DOF acceptance threshold. The quick profile lowers that threshold to zero and runs
+only dense and sparse-LU oracles on levels 1 and 2.
 
 ## Remaining issue-22 work
 
-The patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware, production-interface, and
-warped production-onset families now use the common contract. The remaining work is:
+Every existing benchmark now uses the common manifest contract and can be regenerated through
+the standardized runner. The remaining completion work is deliberately limited to:
 
-- migrate the topology-event, BVH, and solver-scaling benchmarks;
-- move repeated SVG chart implementations behind common plotting helpers;
-- add versioned KKT, event, facet-pair, and mesh-refinement row schemas;
-- add checked-in tolerance specifications for selected golden regression metrics.
+- move repeated bespoke SVG charts behind common plotting helpers;
+- add checked-in tolerance specifications and golden metric selections for stable numerical
+  regressions;
+- add KKT, facet-pair, and mesh-refinement schemas when the corresponding new benchmark
+  families are implemented.

@@ -47,9 +47,10 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - ParaView-readable TET4 volume, contact-surface, and projected-overlap VTK output;
 - tolerance-based numeric golden regression helpers;
 - standardized patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware,
-  production-interface, and warped production-onset benchmark suite;
-- machine-readable patch, nonlinear, coupled, continuation, scaling, and warped-onset
-  artifacts;
+  production-interface, warped production-onset, topology-event, BVH, and linear-solver
+  benchmark suite;
+- machine-readable patch, nonlinear, coupled, continuation, scaling, event, search, and
+  solver artifacts;
 - force and moment balance diagnostics;
 - retained numerical operator and residual-tangent oracles.
 
@@ -71,11 +72,19 @@ Install only the optional sparse runtime when development tools are not needed:
 uv sync --extra sparse
 ```
 
-Run and validate the standardized benchmark suite with:
+Run and validate the complete standardized benchmark suite with published settings:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
   --output results/standardized-benchmarks
+```
+
+Use the bounded quick profile for integration checks while retaining every benchmark family:
+
+```bash
+uv run python benchmarks/run_standardized.py \
+  --quick \
+  --output results/standardized-benchmarks-quick
 ```
 
 Regenerate the verification benchmarks individually with:
