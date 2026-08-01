@@ -70,7 +70,12 @@ current standardized suite uses:
 - `contact3d-scale-aware-penalty/v1` for the unit-invariance regression summary;
 - `contact3d-interface-penalties/v1` for dimensional and normalized penalty-update rows;
 - `contact3d-warped-adapter/v1` for the production contact summary;
-- `contact3d-contact-nodes/v1` for slave-node gap, pressure, multiplier, support, and
+- `contact3d-warped-contact-onset/v1` for the coupled warped production-onset summary;
+- `contact3d-warped-onset-steps/v1` for scale-aware accepted-step and reaction records;
+- `contact3d-contact-path-nodes/v1` for per-step slave-row gap, pressure, multiplier,
+  support, and activity;
+- `contact3d-directional-tangent-checks/v1` for smooth-state analytical/oracle checks;
+- `contact3d-contact-nodes/v1` for static slave-node gap, pressure, multiplier, support, and
   activity.
 
 Later benchmark families can add compatible record schemas without changing the directory
@@ -102,7 +107,8 @@ The coupled mortar patch writes `deformed.vtu` with:
 - nodal reactions, external loads, and assembled contact-force vectors;
 - element body identifiers, Jacobian determinants, and strain-energy density.
 
-The mixed contact-onset benchmark writes `deformed.vtu` at the final accepted state with:
+The mixed and warped contact-onset benchmarks write `deformed.vtu` at the final accepted
+state with:
 
 - nodal reactions, effective mixed-path loads, and assembled contact forces;
 - element body identifiers, Jacobian determinants, and strain-energy density.
@@ -114,16 +120,13 @@ a Glyph filter to the force vectors.
 
 `write_surface_vtp` writes TRI3, QUAD4, or general polygon cells as `PolyData`.
 
-The coupled mortar patch and mixed contact-onset benchmark write:
+The coupled mortar patch and both contact-onset benchmarks write:
 
-- `slave-contact.vtp` with normal, gap, pressure, multiplier, support, activity, and contact
-  force;
-- `master-contact.vtp` with normal, contact force, and interface area.
+- `slave-contact.vtp` with gap, pressure, multiplier, support, activity, and contact force;
+- `master-contact.vtp` with contact force and interface or per-facet overlap area.
 
-The warped nonmatching adapter writes:
+The warped nonmatching adapter and warped production-onset benchmark also write:
 
-- `slave-contact.vtp` with nodal normal gap, pressure, support, and active-state fields;
-- `master-contact.vtp` with integrated overlap area per master facet;
 - `projected-overlap.vtp` with slave, master, and intersection polygons in the projection
   plane.
 
@@ -181,13 +184,13 @@ Run one benchmark by repeating `--benchmark` as needed:
 
 ```bash
 uv run python benchmarks/run_standardized.py \
-  --benchmark mixed-load-path \
   --benchmark mixed-contact-onset \
+  --benchmark warped-nonmatching-contact-onset \
   --output results/standardized-benchmarks
 ```
 
 The runner currently covers patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware,
-and production-interface families:
+production-interface, and warped production-onset families:
 
 - `tet4-patch`;
 - `nonlinear-equilibrium`;
@@ -196,18 +199,18 @@ and production-interface families:
 - `mixed-load-path`;
 - `mixed-contact-onset`;
 - `scale-aware-penalty`;
-- `warped-nonmatching-adapter`.
+- `warped-nonmatching-adapter`;
+- `warped-nonmatching-contact-onset`.
 
 It writes `suite-summary.json` only after every subprocess succeeds and every manifest passes
 schema and file-completeness validation.
 
 ## Remaining issue-22 work
 
-The patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware, and production-interface
-families now use the common contract. The remaining work is:
+The patch, bulk, coupled, adaptive, mixed-path, onset, scale-aware, production-interface, and
+warped production-onset families now use the common contract. The remaining work is:
 
-- migrate the warped production onset, topology-event, BVH, and solver-scaling benchmarks;
+- migrate the topology-event, BVH, and solver-scaling benchmarks;
 - move repeated SVG chart implementations behind common plotting helpers;
 - add versioned KKT, event, facet-pair, and mesh-refinement row schemas;
-- export complete coupled volume/contact states from the warped production onset benchmark;
 - add checked-in tolerance specifications for selected golden regression metrics.

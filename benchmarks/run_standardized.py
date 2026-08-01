@@ -23,6 +23,7 @@ BENCHMARKS = {
     "mixed-contact-onset": "mixed_contact_onset.py",
     "scale-aware-penalty": "scale_aware_penalty_regression.py",
     "warped-nonmatching-adapter": "warped_nonmatching_adapter.py",
+    "warped-nonmatching-contact-onset": "warped_nonmatching_contact_onset.py",
 }
 
 

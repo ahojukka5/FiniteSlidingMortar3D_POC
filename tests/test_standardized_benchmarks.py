@@ -35,6 +35,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "mixed-contact-onset",
         "scale-aware-penalty",
         "warped-nonmatching-adapter",
+        "warped-nonmatching-contact-onset",
     }
     assert summary["benchmark_count"] == len(expected)
     assert {row["benchmark"] for row in summary["benchmarks"]} == expected
@@ -52,6 +53,9 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "mixed-load-path": "contact3d-mixed-load-path/v1",
         "mixed-contact-onset": "contact3d-mixed-contact-onset/v1",
         "scale-aware-penalty": "contact3d-scale-aware-penalty/v1",
+        "warped-nonmatching-contact-onset": (
+            "contact3d-warped-contact-onset/v1"
+        ),
     }
     for name, schema in summary_schemas.items():
         payload = json.loads(
@@ -69,6 +73,10 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         output / "mixed-contact-onset" / "slave-contact.vtp",
         output / "mixed-contact-onset" / "master-contact.vtp",
         output / "warped-nonmatching-adapter" / "projected-overlap.vtp",
+        output / "warped-nonmatching-contact-onset" / "deformed.vtu",
+        output / "warped-nonmatching-contact-onset" / "slave-contact.vtp",
+        output / "warped-nonmatching-contact-onset" / "master-contact.vtp",
+        output / "warped-nonmatching-contact-onset" / "projected-overlap.vtp",
     )
     for path in vtk_files:
         root = ElementTree.parse(path).getroot()
