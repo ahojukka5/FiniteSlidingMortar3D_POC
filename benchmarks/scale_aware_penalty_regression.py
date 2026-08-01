@@ -12,6 +12,7 @@ from xml.etree import ElementTree
 import numpy as np
 
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+from contact3d.benchmark_plots import write_bar_chart
 from contact3d.bulk_material import NeoHookeanMaterial
 from contact3d.enforcement_state import KKTDiagnostics
 from contact3d.scaling import (
@@ -161,55 +162,6 @@ def evaluate(name: str, length_factor: float, pressure_factor: float):
     return rows, plan
 
 
-def write_chart(
-    path: Path,
-    title: str,
-    rows: list[dict[str, object]],
-    field: str,
-) -> None:
-    width, height = 760, 420
-    left, right, top, bottom = 72, 28, 44, 64
-    values = np.array([float(row[field]) for row in rows], dtype=float)
-    maximum = max(float(np.max(values, initial=0.0)), 1.0e-15)
-    x_step = (width - left - right) / max(len(rows), 1)
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width / 2}" y="26" text-anchor="middle" '
-            f'font-family="sans-serif" font-size="16">{title}</text>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top}" x2="{left}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    for index, (row, value) in enumerate(zip(rows, values, strict=True)):
-        center = left + (index + 0.5) * x_step
-        bar_height = value / maximum * (height - top - bottom)
-        y = height - bottom - bar_height
-        lines.extend(
-            [
-                (
-                    f'<rect x="{center - 0.25 * x_step:.2f}" y="{y:.2f}" '
-                    f'width="{0.5 * x_step:.2f}" height="{bar_height:.2f}" '
-                    'fill="none" stroke="black"/>'
-                ),
-                (
-                    f'<text x="{center:.2f}" y="{height-bottom+20}" '
-                    f'text-anchor="middle" font-family="monospace" font-size="10">'
-                    f'{row["unit_system"]}:I{row["interface"]}</text>'
-                ),
-            ]
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     settings = {
@@ -280,17 +232,23 @@ def run(output: Path) -> dict[str, object]:
         rows,
         schema="contact3d-interface-penalties/v1",
     )
-    write_chart(
-        output / "normalized-penetration.svg",
-        "Normalized interface penetration",
-        rows,
-        "normalized_penetration",
+    labels = tuple(
+        f'{row["unit_system"]}:I{row["interface"]}'
+        for row in rows
     )
-    write_chart(
+    write_bar_chart(
+        output / "normalized-penetration.svg",
+        title="Normalized interface penetration",
+        y_label="penetration / interface length",
+        labels=labels,
+        values=np.asarray([float(row["normalized_penetration"]) for row in rows]),
+    )
+    write_bar_chart(
         output / "penalty-ratio.svg",
-        "Dimensionless normal-penalty ratio after update",
-        rows,
-        "penalty_ratio_after",
+        title="Dimensionless normal-penalty ratio after update",
+        y_label="penalty / material-length scale",
+        labels=labels,
+        values=np.asarray([float(row["penalty_ratio_after"]) for row in rows]),
     )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)

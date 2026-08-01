@@ -13,6 +13,7 @@ from xml.etree import ElementTree
 import numpy as np
 
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+from contact3d.benchmark_plots import write_line_chart
 from contact3d.broad_phase import FacetAABBTree, facet_aabbs
 from contact3d.surface import (
     ContactSurface,
@@ -134,108 +135,6 @@ def _row(subdivisions: int) -> dict[str, object]:
     }
 
 
-def _scale(value: float, lower: float, upper: float, start: float, stop: float) -> float:
-    if upper == lower:
-        return 0.5 * (start + stop)
-    return start + (value - lower) / (upper - lower) * (stop - start)
-
-
-def _write_operation_plot(path: Path, rows: list[dict[str, object]]) -> None:
-    width, height = 820, 480
-    left, right, top, bottom = 76, 32, 46, 62
-    x_values = np.log10([float(row["slave_facets"]) for row in rows])
-    bvh_values = np.log10([float(row["facet_tests"]) for row in rows])
-    brute_values = np.log10([float(row["quadratic_tests"]) for row in rows])
-    ymin = float(min(np.min(bvh_values), np.min(brute_values)))
-    ymax = float(max(np.max(bvh_values), np.max(brute_values)))
-
-    def point(x: float, y: float) -> tuple[float, float]:
-        return (
-            _scale(
-                x,
-                float(np.min(x_values)),
-                float(np.max(x_values)),
-                left,
-                width - right,
-            ),
-            _scale(y, ymin, ymax, height - bottom, top),
-        )
-
-    bvh_points = [
-        point(float(x), float(y))
-        for x, y in zip(x_values, bvh_values, strict=True)
-    ]
-    brute_points = [
-        point(float(x), float(y))
-        for x, y in zip(x_values, brute_values, strict=True)
-    ]
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width / 2}" y="26" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Broad-phase operation scaling</text>'
-        ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-        (
-            f'<polyline points="{" ".join(f"{x:.2f},{y:.2f}" for x, y in bvh_points)}" '
-            'fill="none" stroke="black" stroke-width="2"/>'
-        ),
-        (
-            f'<polyline points="{" ".join(f"{x:.2f},{y:.2f}" for x, y in brute_points)}" '
-            'fill="none" stroke="black" stroke-width="2" stroke-dasharray="7 5"/>'
-        ),
-        '<text x="100" y="70" font-family="sans-serif" font-size="12">BVH facet tests</text>',
-        (
-            '<text x="100" y="88" font-family="sans-serif" font-size="12">'
-            'quadratic oracle (dashed)</text>'
-        ),
-    ]
-    for x, y in bvh_points:
-        lines.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="black"/>')
-    for x, y in brute_points:
-        lines.append(
-            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="white" '
-            'stroke="black"/>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def _write_refit_plot(path: Path, rows: list[dict[str, object]]) -> None:
-    width, height = 820, 420
-    left, right, top, bottom = 76, 32, 46, 62
-    ratios = [float(row["refit_to_build_ratio"]) for row in rows]
-    maximum = max(1.0, max(ratios))
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width / 2}" y="26" text-anchor="middle" '
-            'font-family="sans-serif" font-size="16">Refit cost relative to topology build</text>'
-        ),
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{height-bottom}" stroke="black"/>',
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    for index, (row, ratio) in enumerate(zip(rows, ratios, strict=True)):
-        x = left + (index + 1) * (width - left - right) / (len(rows) + 1)
-        y = height - bottom - ratio / maximum * (height - top - bottom)
-        lines.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4" fill="black"/>')
-        lines.append(
-            f'<text x="{x:.2f}" y="{height-bottom+20}" text-anchor="middle" '
-            f'font-family="monospace" font-size="10">{row["master_facets"]}</text>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def run(
     output: Path,
     *,
@@ -291,8 +190,37 @@ def run(
         rows,
         schema="contact3d-broad-phase-levels/v1",
     )
-    _write_operation_plot(output / "operation-scaling.svg", rows)
-    _write_refit_plot(output / "refit-cost.svg", rows)
+    write_line_chart(
+        output / "operation-scaling.svg",
+        title="Broad-phase operation scaling",
+        x_label="slave facets",
+        y_label="tested facet pairs",
+        x_values=facet_counts,
+        series=(
+            (test_counts, "BVH facet tests"),
+            (
+                np.asarray([float(row["quadratic_tests"]) for row in rows]),
+                "quadratic oracle",
+            ),
+        ),
+        logarithmic_x=True,
+        logarithmic_y=True,
+        show_markers=True,
+    )
+    write_line_chart(
+        output / "refit-cost.svg",
+        title="Refit cost relative to topology build",
+        x_label="master facets",
+        y_label="refit / build time",
+        x_values=np.asarray([float(row["master_facets"]) for row in rows]),
+        series=(
+            (
+                np.asarray([float(row["refit_to_build_ratio"]) for row in rows]),
+                "refit / build",
+            ),
+        ),
+        show_markers=True,
+    )
     for path in output.glob("*.svg"):
         ElementTree.parse(path)
         artifacts.register(path.name, "svg")

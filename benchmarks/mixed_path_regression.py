@@ -22,6 +22,7 @@ from contact3d.adaptive import (
     solve_adaptive_contact_path,
 )
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+from contact3d.benchmark_plots import write_line_chart
 from contact3d.coupled import AugmentedContactOptions
 from contact3d.enforcement_state import AugmentedLagrangeState
 from contact3d.equilibrium import DeadLoad, DirichletConstraints
@@ -151,65 +152,6 @@ def _solver(problem, displacement, states, *, load_factor, options, tolerance):
     return _result(parameter, 10.0 + parameter, converged=True)
 
 
-def _write_chart(
-    path: Path,
-    *,
-    title: str,
-    x_values: np.ndarray,
-    series: tuple[tuple[np.ndarray, str], ...],
-) -> None:
-    width, height = 760, 430
-    left, right, top, bottom = 72, 28, 42, 64
-    plot_width = width - left - right
-    plot_height = height - top - bottom
-    x_min, x_max = float(np.min(x_values)), float(np.max(x_values))
-    y_min = min(float(np.min(values)) for values, _ in series)
-    y_max = max(float(np.max(values)) for values, _ in series)
-    padding = 0.08 * max(1.0, y_max - y_min)
-    y_min -= padding
-    y_max += padding
-
-    def sx(value: float) -> float:
-        return left + (value - x_min) / max(1.0e-12, x_max - x_min) * plot_width
-
-    def sy(value: float) -> float:
-        return top + (y_max - value) / max(1.0e-12, y_max - y_min) * plot_height
-
-    lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">',
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{width/2}" y="25" text-anchor="middle" '
-            f'font-family="sans-serif" font-size="16">{title}</text>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top}" x2="{left}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-        (
-            f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" '
-            f'y2="{height-bottom}" stroke="black"/>'
-        ),
-    ]
-    dash_patterns = ("", ' stroke-dasharray="7,4"', ' stroke-dasharray="2,4"')
-    for index, (values, label) in enumerate(series):
-        points = " ".join(
-            f"{sx(float(x)):.2f},{sy(float(y)):.2f}"
-            for x, y in zip(x_values, values, strict=True)
-        )
-        dash = dash_patterns[index % len(dash_patterns)]
-        lines.append(
-            f'<polyline points="{points}" fill="none" stroke="black" '
-            f'stroke-width="2"{dash}/>'
-        )
-        lines.append(
-            f'<text x="{width-right}" y="{52+18*index}" text-anchor="end" '
-            f'font-family="sans-serif" font-size="11">{label}</text>'
-        )
-    lines.append("</svg>")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
 def run(output: Path) -> dict[str, object]:
     output.mkdir(parents=True, exist_ok=True)
     problem, path = model()
@@ -330,9 +272,11 @@ def run(output: Path) -> dict[str, object]:
     )
 
     parameter = np.asarray([float(row["parameter"]) for row in step_rows])
-    _write_chart(
+    write_line_chart(
         output / "boundary-path.svg",
         title="Accepted mixed boundary/load path",
+        x_label="continuation parameter",
+        y_label="prescribed value / load norm",
         x_values=parameter,
         series=(
             (np.asarray([float(row["tool_z"]) for row in step_rows]), "tool z"),
@@ -342,15 +286,19 @@ def run(output: Path) -> dict[str, object]:
                 "load norm",
             ),
         ),
+        show_markers=True,
     )
-    _write_chart(
+    write_line_chart(
         output / "reaction-path.svg",
         title="Constrained reaction history",
+        x_label="continuation parameter",
+        y_label="summed constrained reaction",
         x_values=parameter,
         series=(
             (np.asarray([float(row["reaction_x"]) for row in step_rows]), "reaction x"),
             (np.asarray([float(row["reaction_z"]) for row in step_rows]), "reaction z"),
         ),
+        show_markers=True,
     )
     for svg in output.glob("*.svg"):
         ElementTree.parse(svg)
