@@ -23,6 +23,7 @@ from .load_path import (
     LoadFactorPath,
     with_coupled_boundary_data,
 )
+from .rigid_path import RigidBodyBoundaryPath
 from .scaled_solver import (
     ScaleAwareAugmentationIteration,
     ScaleAwareAugmentedContactResult,
@@ -62,6 +63,7 @@ __all__ = [
     "PenaltyControlledContactInterface",
     "PenaltyUpdateDecision",
     "PenaltyUpdatePlan",
+    "RigidBodyBoundaryPath",
     "ScaleAwareAugmentationIteration",
     "ScaleAwareAugmentedContactResult",
     "ScaleAwareConvergenceOptions",
