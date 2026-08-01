@@ -1,12 +1,26 @@
 """Public API for event-localized coupled contact solvers."""
 
+from .event_adaptive import (
+    AdaptiveTopologyEventBatch,
+    EventAwareAdaptiveContactResult,
+    solve_event_aware_adaptive_contact_path,
+)
 from .event_augmented import solve_event_aware_augmented_contact
 from .event_model import EventAwareAugmentedContactResult, EventAwareCoupledNewtonResult
 from .event_newton import solve_event_aware_coupled_equilibrium
+from .event_scaled import (
+    EventAwareScaleAwareAugmentedContactResult,
+    solve_event_aware_scale_aware_augmented_contact,
+)
 
 __all__ = [
+    "AdaptiveTopologyEventBatch",
+    "EventAwareAdaptiveContactResult",
     "EventAwareAugmentedContactResult",
     "EventAwareCoupledNewtonResult",
+    "EventAwareScaleAwareAugmentedContactResult",
+    "solve_event_aware_adaptive_contact_path",
     "solve_event_aware_augmented_contact",
     "solve_event_aware_coupled_equilibrium",
+    "solve_event_aware_scale_aware_augmented_contact",
 ]
