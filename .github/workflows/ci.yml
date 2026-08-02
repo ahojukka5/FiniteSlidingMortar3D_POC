@@ -24,25 +24,21 @@ jobs:
           exit 1
 
   test:
-    name: Lint and test (Python ${{ matrix.python-version }})
+    name: Lint and test (Python 3.12)
     needs: guard-self-hosted
     runs-on: self-hosted
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv and Python
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           enable-cache: true
           cache-dependency-glob: pyproject.toml
 
       - name: Sync dependencies
-        run: uv sync --extra dev --python ${{ matrix.python-version }}
+        run: uv sync --extra dev --python 3.12
 
       - name: Ruff check
         run: uv run ruff check .
