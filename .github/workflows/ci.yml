@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lint and test (Python ${{ matrix.python-version }})
+    runs-on: [self-hosted, linux, x64, lumi, lumi-cpu, lumi-small]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Sync dependencies
+        run: uv sync --extra dev --python ${{ matrix.python-version }}
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Run test suite
+        run: uv run pytest -q
