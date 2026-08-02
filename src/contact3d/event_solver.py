@@ -12,6 +12,10 @@ from .event_scaled import (
     EventAwareScaleAwareAugmentedContactResult,
     solve_event_aware_scale_aware_augmented_contact,
 )
+from .multiplier_transport import (
+    MultiplierTransportRecord,
+    transport_multiplier_states,
+)
 from .restart_diagnostics import (
     RestartAttemptDiagnostic,
     RestartCount,
@@ -28,6 +32,7 @@ __all__ = [
     "EventAwareAugmentedContactResult",
     "EventAwareCoupledNewtonResult",
     "EventAwareScaleAwareAugmentedContactResult",
+    "MultiplierTransportRecord",
     "RestartAttemptDiagnostic",
     "RestartCount",
     "RestartDiagnosticOptions",
@@ -39,4 +44,5 @@ __all__ = [
     "solve_event_aware_augmented_contact",
     "solve_event_aware_coupled_equilibrium",
     "solve_event_aware_scale_aware_augmented_contact",
+    "transport_multiplier_states",
 ]

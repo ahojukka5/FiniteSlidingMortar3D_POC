@@ -14,6 +14,7 @@ from .coupled import (
 from .enforcement_state import AugmentedLagrangeState
 from .linear_solver import LinearSolveDiagnostics
 from .model import FloatArray
+from .multiplier_transport import MultiplierTransportRecord
 from .topology_events import ContactTopologyEventBatch
 
 
@@ -29,6 +30,8 @@ class EventAwareCoupledNewtonResult:
     history: tuple[CoupledNewtonIteration, ...]
     events: tuple[ContactTopologyEventBatch, ...]
     linear_solve_failure: LinearSolveDiagnostics | None = None
+    states: tuple[AugmentedLagrangeState, ...] = ()
+    multiplier_transports: tuple[MultiplierTransportRecord, ...] = ()
 
     @property
     def iteration_count(self) -> int:
@@ -37,6 +40,15 @@ class EventAwareCoupledNewtonResult:
     @property
     def contact_event_restarts(self) -> int:
         return len(self.events)
+
+    @property
+    def multiplier_transport_count(self) -> int:
+        return len(self.multiplier_transports)
+
+    def multiplier_transport_rows(self) -> tuple[dict[str, object], ...]:
+        """Return machine-readable support-transport rows."""
+
+        return tuple(record.as_dict() for record in self.multiplier_transports)
 
     def legacy_result(self) -> CoupledNewtonResult:
         """Drop event details while preserving the established solver result API."""
@@ -68,3 +80,11 @@ class EventAwareAugmentedContactResult:
     @property
     def events(self) -> tuple[ContactTopologyEventBatch, ...]:
         return tuple(event for result in self.equilibria for event in result.events)
+
+    @property
+    def multiplier_transports(self) -> tuple[MultiplierTransportRecord, ...]:
+        return tuple(
+            record
+            for result in self.equilibria
+            for record in result.multiplier_transports
+        )
