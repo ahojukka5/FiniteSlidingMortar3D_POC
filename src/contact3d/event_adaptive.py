@@ -75,6 +75,15 @@ class EventAwareAdaptiveContactResult:
 
     adaptive: AdaptiveContactResult
     event_batches: tuple[AdaptiveTopologyEventBatch, ...]
+    attempt_results: tuple[object, ...] = ()
+
+    def __post_init__(self) -> None:
+        batches = tuple(self.event_batches)
+        attempts = tuple(self.attempt_results)
+        if attempts and len(attempts) != len(self.adaptive.attempts):
+            raise ValueError("attempt results must align with adaptive attempts")
+        object.__setattr__(self, "event_batches", batches)
+        object.__setattr__(self, "attempt_results", attempts)
 
     @property
     def problem(self) -> CoupledEquilibriumProblem:
@@ -266,4 +275,8 @@ def solve_event_aware_adaptive_contact_path(
         for attempt, result in zip(adaptive.attempts, attempt_results, strict=True)
         for record in _event_records(attempt, result)
     )
-    return EventAwareAdaptiveContactResult(adaptive, batches)
+    return EventAwareAdaptiveContactResult(
+        adaptive,
+        batches,
+        tuple(attempt_results),
+    )
