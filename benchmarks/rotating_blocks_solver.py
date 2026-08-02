@@ -91,11 +91,47 @@ def solver_options(profile: RotatingBlocksExecutionProfile) -> AdaptiveContactOp
     )
 
 
-def _accepted_rows(result: object) -> tuple[dict[str, object], ...]:
+def _contact_metrics(step: object) -> dict[str, object]:
+    result = step.result
+    equilibrium = getattr(result, "equilibrium", None)
+    evaluation = getattr(equilibrium, "evaluation", None)
+    contacts = tuple(getattr(evaluation, "contacts", ()))
+    if not contacts:
+        return {
+            "maximum_pressure": 0.0,
+            "overlap_area": 0.0,
+            "active_rows": 0,
+            "supported_rows": 0,
+            "facet_pairs": 0,
+        }
+    contact = contacts[0]
+    weights = contact.raw.contact.weights
+    return {
+        "maximum_pressure": float(np.max(contact.pressure, initial=0.0)),
+        "overlap_area": float(weights.total_area),
+        "active_rows": int(np.count_nonzero(contact.signature.active_rows)),
+        "supported_rows": int(np.count_nonzero(contact.signature.supported_rows)),
+        "facet_pairs": len(contact.signature.facet_pairs),
+    }
+
+
+def _controlled_reaction(step: object, controlled_nodes: np.ndarray) -> np.ndarray:
+    reaction = getattr(step, "reaction", None)
+    if reaction is None:
+        return np.zeros(3)
+    nodal = np.asarray(reaction, dtype=float).reshape((-1, 3))
+    return np.sum(nodal[np.asarray(controlled_nodes, dtype=np.int64)], axis=0)
+
+
+def _accepted_rows(
+    result: object,
+    controlled_nodes: np.ndarray,
+) -> tuple[dict[str, object], ...]:
     rows: list[dict[str, object]] = []
     for index, step in enumerate(tuple(getattr(result, "accepted_steps", ())), start=1):
         state = step.path_state
         value = state.value
+        reaction = _controlled_reaction(step, controlled_nodes)
         rows.append(
             {
                 "accepted_step": index,
@@ -104,8 +140,12 @@ def _accepted_rows(result: object) -> tuple[dict[str, object], ...]:
                 "phase_parameter": float(value("phase_parameter")),
                 "rotation_angle": float(value("rotation_angle")),
                 "reaction_norm": float(step.reaction_norm),
+                "reaction_x": float(reaction[0]),
+                "reaction_y": float(reaction[1]),
+                "reaction_z": float(reaction[2]),
                 "inner_converged": bool(step.result.converged),
                 "inner_termination_reason": str(step.result.termination_reason),
+                **_contact_metrics(step),
             }
         )
     return tuple(rows)
@@ -213,7 +253,7 @@ def run(
         path=model.path,
         options=solver_options(selected),
     )
-    accepted_rows = _accepted_rows(result)
+    accepted_rows = _accepted_rows(result, model.controlled_nodes)
     attempt_rows = _attempt_rows(result)
     event_rows = tuple(result.event_rows())
     summary = _summary(selected, result, accepted_rows, attempt_rows, event_rows)
