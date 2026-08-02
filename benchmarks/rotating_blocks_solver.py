@@ -95,7 +95,7 @@ def _accepted_rows(result: object) -> tuple[dict[str, object], ...]:
     rows: list[dict[str, object]] = []
     for index, step in enumerate(tuple(getattr(result, "accepted_steps", ())), start=1):
         state = step.path_state
-        value = getattr(state, "value")
+        value = state.value
         rows.append(
             {
                 "accepted_step": index,
@@ -215,7 +215,7 @@ def run(
     )
     accepted_rows = _accepted_rows(result)
     attempt_rows = _attempt_rows(result)
-    event_rows = tuple(getattr(result, "event_rows")())
+    event_rows = tuple(result.event_rows())
     summary = _summary(selected, result, accepted_rows, attempt_rows, event_rows)
     completed = RotatingBlocksSolverRun(
         selected,
