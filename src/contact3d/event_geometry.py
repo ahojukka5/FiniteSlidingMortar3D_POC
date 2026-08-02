@@ -6,6 +6,7 @@ import numpy as np
 
 from .clipping import ClippingTopologyError
 from .coupled import (
+    ContactInterfaceEvaluation,
     CoupledEquilibriumEvaluation,
     CoupledEquilibriumProblem,
     evaluate_coupled_equilibrium,
@@ -19,6 +20,7 @@ from .parametric import InverseMapTopologyError
 from .topology_events import ContactTopologySignature, EventKind, TopologyObservation
 
 _RECOVERABLE_ERRORS = (ClippingTopologyError, PalletTopologyError, InverseMapTopologyError)
+
 
 def _validated_states(
     problem: CoupledEquilibriumProblem,
@@ -44,15 +46,20 @@ def _relative_residual(norm: float, initial_norm: float) -> float:
     return norm / max(initial_norm, np.finfo(float).tiny)
 
 
-def _event_signatures(
+def contact_topology_signatures(
     problem: CoupledEquilibriumProblem,
-    evaluation: CoupledEquilibriumEvaluation,
+    displacement: FloatArray,
+    contacts: tuple[ContactInterfaceEvaluation, ...],
     *,
     tolerance: float,
 ) -> tuple[ContactTopologySignature, ...]:
-    values = np.asarray(evaluation.displacement, dtype=float).reshape((-1, 3))
+    """Return event-compatible signatures for already evaluated interfaces."""
+
+    values = np.asarray(displacement, dtype=float).reshape((-1, 3))
+    if len(contacts) != len(problem.interfaces):
+        raise ValueError("one contact evaluation is required for every interface")
     signatures: list[ContactTopologySignature] = []
-    for interface, contact in zip(problem.interfaces, evaluation.contacts, strict=True):
+    for interface, contact in zip(problem.interfaces, contacts, strict=True):
         geometry_tokens: list[tuple[int, int, int, int, int]] = []
         pair = getattr(interface, "pair", None)
         slave_nodes = getattr(interface, "slave_nodes", None)
@@ -90,6 +97,20 @@ def _event_signatures(
     return tuple(signatures)
 
 
+def _event_signatures(
+    problem: CoupledEquilibriumProblem,
+    evaluation: CoupledEquilibriumEvaluation,
+    *,
+    tolerance: float,
+) -> tuple[ContactTopologySignature, ...]:
+    return contact_topology_signatures(
+        problem,
+        evaluation.displacement,
+        evaluation.contacts,
+        tolerance=tolerance,
+    )
+
+
 def _observation(
     problem: CoupledEquilibriumProblem,
     states: tuple[AugmentedLagrangeState, ...],
@@ -117,5 +138,3 @@ def _observation(
         )
     signatures = _event_signatures(problem, evaluation, tolerance=tolerance)
     return TopologyObservation.valid(fraction, signatures, evaluation)
-
-
