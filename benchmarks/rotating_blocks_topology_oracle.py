@@ -9,11 +9,11 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 import numpy as np
+from rotating_blocks_model import build_rotating_blocks_model, rotating_blocks_profile
 
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.benchmark_plots import write_category_timeline, write_line_chart
 from contact3d.topology_scan import KinematicTopologyScan, scan_kinematic_contact_path
-from rotating_blocks_model import build_rotating_blocks_model, rotating_blocks_profile
 
 SUMMARY_SCHEMA = "contact3d-rotating-blocks-topology-oracle/v1"
 SAMPLE_SCHEMA = "contact3d-kinematic-topology-samples/v1"
