@@ -562,7 +562,7 @@ def solve_coupled_equilibrium(
         branch_changed = False
         alpha = 1.0
         line_iteration = 0
-        for line_iteration in range(settings.maximum_line_search_iterations):
+        for line_iteration in range(settings.maximum_line_search_iterations):  # noqa: B007 -- read after the loop as line_search_iterations
             try:
                 trial = evaluate_coupled_equilibrium(
                     problem,

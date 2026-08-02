@@ -9,6 +9,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 import numpy as np
+from svg_plots import write_line_chart
 
 from contact3d import (
     AdaptiveContactOptions,
@@ -27,7 +28,6 @@ from contact3d import (
 )
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled_oracle import FrozenMatchingMortarInterface
-from svg_plots import write_line_chart
 
 
 def block_nodes(z_origin: float) -> np.ndarray:

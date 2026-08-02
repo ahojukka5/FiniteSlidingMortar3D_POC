@@ -9,7 +9,6 @@ import pytest
 
 from contact3d import MortarContactInterface, evaluate_coupled_equilibrium
 
-
 BENCHMARK_PATH = (
     Path(__file__).resolve().parents[1]
     / "benchmarks"

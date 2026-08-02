@@ -10,7 +10,6 @@ from .coupled import (
     AugmentedContactOptions,
     ContactInterfaceEvaluation,
     CoupledEquilibriumProblem,
-    CoupledNewtonIteration,
     CoupledNewtonResult,
     solve_coupled_equilibrium,
 )

@@ -6,10 +6,10 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 import numpy as np
+from svg_plots import write_line_chart
 
 from contact3d import build_facet_overlap
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
-from svg_plots import write_line_chart
 
 try:
     from .warped_onset_analysis import OnsetHistories

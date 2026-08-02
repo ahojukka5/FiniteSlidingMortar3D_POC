@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
-from typing import Callable
 
 import numpy as np
 
@@ -15,7 +15,6 @@ from .adaptive_model import (
 )
 from .adaptive_options import AdaptiveContactOptions, AdaptivePenaltyOptions
 from .coupled import (
-    AugmentedContactResult,
     CoupledEquilibriumProblem,
     solve_augmented_contact,
 )

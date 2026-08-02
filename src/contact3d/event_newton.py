@@ -159,7 +159,7 @@ def solve_event_aware_coupled_equilibrium(
         localized: ContactTopologyEventBatch | None = None
         alpha = 1.0
         line_iteration = 0
-        for line_iteration in range(settings.maximum_line_search_iterations):
+        for line_iteration in range(settings.maximum_line_search_iterations):  # noqa: B007 -- read after the loop as line_search_iterations
             try:
                 trial_observation = _observation(
                     problem,
@@ -189,8 +189,8 @@ def solve_event_aware_coupled_equilibrium(
                             lambda fraction: _observation(
                                 problem,
                                 states,
-                                displacement,
-                                step,
+                                displacement,  # noqa: B023 -- loop-invariant here, only alpha/fraction vary
+                                step,  # noqa: B023 -- loop-invariant here, only alpha/fraction vary
                                 fraction,
                                 load_factor=load_factor,
                                 tolerance=tolerance,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from .topology_diff import _KIND_ORDER, same_branch, signature_events
 from .topology_model import (

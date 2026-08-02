@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from xml.etree import ElementTree
 
 import numpy as np
+from svg_plots import write_line_chart
 
 from contact3d.adaptive import (
     AdaptiveContactOptions,
@@ -22,7 +23,6 @@ from contact3d.adaptive import (
 from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
 from contact3d.coupled import AugmentedContactOptions, AugmentedContactResult
 from contact3d.enforcement_state import AugmentedLagrangeState
-from svg_plots import write_line_chart
 
 
 @dataclass(frozen=True, slots=True)

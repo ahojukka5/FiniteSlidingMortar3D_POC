@@ -7,8 +7,8 @@ import numpy as np
 from .coupled import AugmentationIteration, AugmentedContactOptions, CoupledEquilibriumProblem
 from .enforcement_state import AugmentedLagrangeState
 from .event_geometry import _validated_states
-from .event_newton import solve_event_aware_coupled_equilibrium
 from .event_model import EventAwareAugmentedContactResult, EventAwareCoupledNewtonResult
+from .event_newton import solve_event_aware_coupled_equilibrium
 from .model import FloatArray
 from .topology_events import TopologyEventLocalizationOptions
 

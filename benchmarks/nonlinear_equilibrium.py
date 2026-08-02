@@ -8,9 +8,8 @@ import json
 from pathlib import Path
 from xml.etree import ElementTree
 
-from svg_plots import write_line_chart, write_sparsity
-
 import numpy as np
+from svg_plots import write_line_chart, write_sparsity
 
 from contact3d import (
     DeadLoad,

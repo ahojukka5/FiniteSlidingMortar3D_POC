@@ -313,7 +313,7 @@ def solve_equilibrium(
         accepted: EquilibriumEvaluation | None = None
         alpha = 1.0
         line_iteration = 0
-        for line_iteration in range(settings.maximum_line_search_iterations):
+        for line_iteration in range(settings.maximum_line_search_iterations):  # noqa: B007 -- read after the loop as line_search_iterations
             trial_displacement = displacement + alpha * step
             try:
                 trial = evaluate_equilibrium(
