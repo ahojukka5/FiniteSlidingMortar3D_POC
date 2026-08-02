@@ -15,7 +15,8 @@ from rotating_blocks_profiles import (
     RotatingBlocksExecutionProfile,
     rotating_blocks_execution_profile,
 )
-from rotating_blocks_solver import RotatingBlocksSolverRun, run as run_solver
+from rotating_blocks_solver import RotatingBlocksSolverRun
+from rotating_blocks_solver import run as run_solver
 from svg_plots import write_line_chart
 
 SCHEMA = "contact3d-rotating-blocks-refinement/v1"
@@ -131,7 +132,9 @@ def _event_key(row: dict[str, object]) -> tuple[str, str, int]:
     )
 
 
-def _event_positions(rows: tuple[dict[str, object], ...]) -> dict[tuple[str, str, int], list[float]]:
+def _event_positions(
+    rows: tuple[dict[str, object], ...],
+) -> dict[tuple[str, str, int], list[float]]:
     grouped: dict[tuple[str, str, int], list[float]] = {}
     for row in rows:
         grouped.setdefault(_event_key(row), []).append(
@@ -155,8 +158,14 @@ def _event_comparison_rows(
         fine_values = fine_events.get(key, [])
         count = max(len(medium_values), len(fine_values))
         for occurrence in range(count):
-            medium_value = medium_values[occurrence] if occurrence < len(medium_values) else None
-            fine_value = fine_values[occurrence] if occurrence < len(fine_values) else None
+            medium_value = (
+                medium_values[occurrence]
+                if occurrence < len(medium_values)
+                else None
+            )
+            fine_value = (
+                fine_values[occurrence] if occurrence < len(fine_values) else None
+            )
             error = (
                 abs(medium_value - fine_value)
                 if medium_value is not None and fine_value is not None
@@ -197,6 +206,7 @@ def _summary(
     )
     final_parameters = [float(level.run.summary["final_parameter"]) for level in levels]
     final_states = [level.run.accepted_rows[-1] for level in levels]
+    event_tolerance = 2.0 / levels[-2].requested_steps
     criteria = {
         "all_runs_passed": all(level.run.passed for level in levels),
         "final_motion_reached": all(
@@ -205,13 +215,16 @@ def _summary(
         ),
         "final_contact_state_matches": all(
             int(row["active_rows"]) == int(final_states[-1]["active_rows"])
-            and int(row["supported_rows"]) == int(final_states[-1]["supported_rows"])
+            and int(row["supported_rows"])
+            == int(final_states[-1]["supported_rows"])
             and int(row["facet_pairs"]) == int(final_states[-1]["facet_pairs"])
             for row in final_states[:-1]
         ),
         "medium_fine_fields_converged": max(field_errors.values()) <= 5.0e-2,
         "event_counts_match": event_counts_match,
-        "event_locations_converged": max(event_errors, default=0.0) <= 2.0 / levels[-2].requested_steps,
+        "event_locations_converged": (
+            max(event_errors, default=0.0) <= event_tolerance
+        ),
     }
     return {
         "schema_version": SCHEMA,
@@ -292,7 +305,10 @@ def write_results(output: Path, result: RotatingBlocksRefinement) -> None:
         series=tuple(
             (
                 np.asarray(
-                    [float(row[f"relative_error_{field}"]) for row in result.comparison_rows]
+                    [
+                        float(row[f"relative_error_{field}"])
+                        for row in result.comparison_rows
+                    ]
                 ),
                 field,
             )
