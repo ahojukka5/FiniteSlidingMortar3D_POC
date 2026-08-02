@@ -9,6 +9,7 @@ from .enforcement_state import AugmentedLagrangeState
 from .event_model import EventAwareCoupledNewtonResult
 from .event_newton import solve_event_aware_coupled_equilibrium
 from .model import FloatArray
+from .multiplier_transport import MultiplierTransportRecord
 from .scaled_solver import (
     ScaleAwareAugmentationIteration,
     ScaleAwareNewtonIteration,
@@ -47,6 +48,16 @@ class EventAwareScaleAwareAugmentedContactResult:
         """Return localized event batches in augmentation and Newton order."""
 
         return tuple(batch for equilibrium in self.equilibria for batch in equilibrium.events)
+
+    @property
+    def multiplier_transports(self) -> tuple[MultiplierTransportRecord, ...]:
+        """Return support transports in augmentation and Newton order."""
+
+        return tuple(
+            record
+            for equilibrium in self.equilibria
+            for record in getattr(equilibrium, "multiplier_transports", ())
+        )
 
 
 def solve_event_aware_scale_aware_augmented_contact(
@@ -95,6 +106,9 @@ def solve_event_aware_scale_aware_augmented_contact(
         last_equilibrium = equilibrium
         equilibria.append(equilibrium)
         newton_histories.append(_scaled_newton_history(equilibrium, scales))
+        returned_states = tuple(getattr(equilibrium, "states", ()))
+        if returned_states:
+            states = returned_states
         if not equilibrium.converged:
             return EventAwareScaleAwareAugmentedContactResult(
                 equilibrium.displacement,

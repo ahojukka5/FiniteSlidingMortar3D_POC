@@ -90,6 +90,9 @@ def solve_event_aware_augmented_contact(
         )
         equilibria.append(equilibrium)
         last = equilibrium
+        returned_states = tuple(getattr(equilibrium, "states", ()))
+        if returned_states:
+            states = returned_states
         if not equilibrium.converged:
             return EventAwareAugmentedContactResult(
                 equilibrium.displacement,

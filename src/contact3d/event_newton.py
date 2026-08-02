@@ -26,6 +26,10 @@ from .event_geometry import (
 from .event_model import EventAwareCoupledNewtonResult
 from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
 from .model import FloatArray
+from .multiplier_transport import (
+    MultiplierTransportRecord,
+    transport_multiplier_states,
+)
 from .topology_events import (
     ContactTopologyEventBatch,
     ContactTopologyStateMachine,
@@ -42,6 +46,8 @@ def _result(
     evaluation: CoupledEquilibriumEvaluation,
     history: list[CoupledNewtonIteration],
     events: list[ContactTopologyEventBatch],
+    states: tuple[AugmentedLagrangeState, ...],
+    transports: list[MultiplierTransportRecord],
     linear_solve_failure: LinearSolveDiagnostics | None = None,
 ) -> EventAwareCoupledNewtonResult:
     return EventAwareCoupledNewtonResult(
@@ -53,6 +59,8 @@ def _result(
         tuple(history),
         tuple(events),
         linear_solve_failure,
+        tuple(states),
+        tuple(transports),
     )
 
 
@@ -85,6 +93,7 @@ def solve_event_aware_coupled_equilibrium(
     displacement = problem.constraints.apply(displacement)
     history: list[CoupledNewtonIteration] = []
     events: list[ContactTopologyEventBatch] = []
+    transports: list[MultiplierTransportRecord] = []
     try:
         evaluation = evaluate_coupled_equilibrium(
             problem,
@@ -110,6 +119,8 @@ def solve_event_aware_coupled_equilibrium(
             residual_only,
             history,
             events,
+            states,
+            transports,
         )
 
     initial_norm = evaluation.free_residual_norm
@@ -126,6 +137,8 @@ def solve_event_aware_coupled_equilibrium(
             evaluation,
             history,
             events,
+            states,
+            transports,
         )
 
     for iteration in range(settings.maximum_iterations):
@@ -146,6 +159,8 @@ def solve_event_aware_coupled_equilibrium(
                 evaluation,
                 history,
                 events,
+                states,
+                transports,
                 linear_result.diagnostics,
             )
         step_free = linear_result.solution
@@ -188,7 +203,7 @@ def solve_event_aware_coupled_equilibrium(
                             trial_observation,
                             lambda fraction: _observation(
                                 problem,
-                                states,
+                                states,  # noqa: B023 -- synchronous pre-transport probe
                                 displacement,  # noqa: B023 -- loop-invariant here, only alpha/fraction vary
                                 step,  # noqa: B023 -- loop-invariant here, only alpha/fraction vary
                                 fraction,
@@ -199,6 +214,13 @@ def solve_event_aware_coupled_equilibrium(
                     except BulkGeometryError:
                         localized = None
                     if localized is not None:
+                        assert localized.selected.signatures is not None
+                        states, updates = transport_multiplier_states(
+                            states,
+                            current_signatures,
+                            localized.selected.signatures,
+                        )
+                        transports.extend(updates)
                         accepted = localized.selected.payload
                         accepted_alpha = localized.selected_fraction
                         branch_changed = True
@@ -225,6 +247,8 @@ def solve_event_aware_coupled_equilibrium(
                 evaluation,
                 history,
                 events,
+                states,
+                transports,
             )
         displacement = accepted.displacement.copy()
         if localized is not None:
@@ -246,6 +270,8 @@ def solve_event_aware_coupled_equilibrium(
                 accepted,
                 history,
                 events,
+                states,
+                transports,
             )
         history.append(
             CoupledNewtonIteration(
@@ -274,6 +300,8 @@ def solve_event_aware_coupled_equilibrium(
                 evaluation,
                 history,
                 events,
+                states,
+                transports,
             )
     return _result(
         displacement,
@@ -283,4 +311,6 @@ def solve_event_aware_coupled_equilibrium(
         evaluation,
         history,
         events,
+        states,
+        transports,
     )
