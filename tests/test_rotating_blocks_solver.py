@@ -24,6 +24,7 @@ def _load_module(name: str, filename: str):
 
 _load_module("rotating_blocks_model", "rotating_blocks_model.py")
 _load_module("rotating_blocks_profiles", "rotating_blocks_profiles.py")
+_load_module("rotating_blocks_diagnostics", "rotating_blocks_diagnostics.py")
 SOLVER = _load_module("rotating_blocks_solver", "rotating_blocks_solver.py")
 
 
@@ -50,6 +51,32 @@ def _attempt(index: int, action: str, parameter: float) -> SimpleNamespace:
         normalized_equilibrium_residual=2.0e-10,
         normalized_maximum_penetration=3.0e-9,
     )
+
+
+def _attempt_result(index: int) -> SimpleNamespace:
+    linear = SimpleNamespace(
+        requested_backend="sparse_lu",
+        backend="sparse_lu",
+        preconditioner="none",
+        converged=True,
+        iterations=1,
+        matrix_nnz=100 + index,
+        materialized_dense=False,
+        setup_seconds=0.01 * index,
+        solve_seconds=0.02 * index,
+    )
+    event = SimpleNamespace(events=(SimpleNamespace(),))
+    equilibrium = SimpleNamespace(
+        history=(
+            SimpleNamespace(
+                line_search_iterations=index,
+                linear_solve=linear,
+            ),
+        ),
+        linear_solve_failure=None,
+        events=(event,),
+    )
+    return SimpleNamespace(equilibria=(equilibrium,))
 
 
 def _result(*, converged: bool = True) -> SimpleNamespace:
@@ -82,7 +109,7 @@ def _result(*, converged: bool = True) -> SimpleNamespace:
         accepted_steps=accepted_steps,
         attempts=attempts,
         event_batches=(),
-        attempt_results=(None,) * len(attempts),
+        attempt_results=tuple(_attempt_result(index) for index in range(1, 5)),
         event_rows=lambda: event_rows,
         converged=converged,
         termination_reason="converged" if converged else "maximum_attempts",
@@ -107,6 +134,8 @@ def test_profiles_map_to_scale_aware_production_options() -> None:
     assert full.load.maximum_attempts == 1024
     assert quick.penalty.interface_local
     assert quick.penalty.normalized_penetration_target == pytest.approx(1.0e-7)
+    assert quick.augmented.newton.linear_solver.backend == "auto"
+    assert full.augmented.newton.linear_solver.backend == "sparse_lu"
 
 
 @pytest.mark.parametrize("profile", ("quick", "full"))
@@ -132,6 +161,15 @@ def test_run_uses_model_path_and_returns_refinement_ready_rows(profile: str) -> 
         "penalty_increase",
         "accepted",
     ]
+    diagnostics = completed.summary["solver_diagnostics"]
+    assert diagnostics["diagnostics_complete"]
+    assert diagnostics["deterministic_counts"]["linear_solves"] == 4
+    assert diagnostics["deterministic_counts"]["linear_iterations"] == 4
+    assert diagnostics["deterministic_counts"]["event_localization_batches"] == 4
+    assert diagnostics["worst_accepted_attempt"]["attempt"] == 4
+    assert diagnostics["worst_failed_attempt"]["attempt"] == 3
+    assert not diagnostics["timings_used_for_acceptance"]
+    assert completed.attempt_rows[0]["maximum_matrix_nnz"] == 101
     assert len(calls) == 1
     assert calls[0][1] == pytest.approx(1.0)
     assert calls[0][2].end_parameter == pytest.approx(1.0)
