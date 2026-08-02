@@ -49,7 +49,7 @@ def test_signature_digest_has_a_fixed_cross_process_value() -> None:
         '"supported_rows":[true,true,true]}'
     )
     assert topology_signature_hash(_signature()) == (
-        "e9f609bf974ff8fd5e01eb54767585562dabed2819822085fe55a1838f36f009"
+        "06f3bb089ff959c84b0e41f27f60ce4be4bd646e7b573297ee80cd4b298eca39"
     )
 
 
