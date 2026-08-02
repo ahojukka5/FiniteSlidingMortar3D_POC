@@ -8,8 +8,13 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
+from rotating_blocks_diagnostics import (
+    RotatingBlocksDiagnostics,
+    collect_solver_diagnostics,
+)
 from rotating_blocks_model import build_rotating_blocks_model
 from rotating_blocks_profiles import (
     RotatingBlocksExecutionProfile,
@@ -28,6 +33,7 @@ from contact3d.event_solver import (
     analyze_restart_diagnostics,
     solve_event_aware_adaptive_contact_path,
 )
+from contact3d.linear_solver import LinearSolverOptions
 
 SCHEMA = "contact3d-rotating-blocks-solver/v1"
 Solver = Callable[..., object]
@@ -43,6 +49,7 @@ class RotatingBlocksSolverRun:
     accepted_rows: tuple[dict[str, object], ...]
     attempt_rows: tuple[dict[str, object], ...]
     event_rows: tuple[dict[str, object], ...]
+    diagnostic_rows: tuple[dict[str, object], ...]
 
     @property
     def passed(self) -> bool:
@@ -60,6 +67,10 @@ def solver_options(profile: RotatingBlocksExecutionProfile) -> AdaptiveContactOp
         projection_tolerance=1.0e-7,
         multiplier_tolerance=1.0e-7,
     )
+    linear = LinearSolverOptions(
+        backend="auto" if profile.name == "quick" else "sparse_lu",
+        dense_threshold=96,
+    )
     augmented = AugmentedContactOptions(
         maximum_augmentations=16,
         gap_tolerance=1.0e-8,
@@ -71,6 +82,7 @@ def solver_options(profile: RotatingBlocksExecutionProfile) -> AdaptiveContactOp
             maximum_iterations=40 if profile.name == "quick" else 50,
             absolute_tolerance=1.0e-10,
             relative_tolerance=1.0e-10,
+            linear_solver=linear,
         ),
     )
     return AdaptiveContactOptions(
@@ -151,27 +163,51 @@ def _accepted_rows(
     return tuple(rows)
 
 
-def _attempt_rows(result: object) -> tuple[dict[str, object], ...]:
-    return tuple(
-        {
-            "attempt": int(attempt.attempt),
-            "start_parameter": float(attempt.start_parameter),
-            "target_parameter": float(attempt.target_parameter),
-            "step_size": float(attempt.step_size),
-            "action": str(attempt.action),
-            "inner_termination_reason": str(attempt.inner_termination_reason),
-            "augmentations": int(attempt.augmentations),
-            "newton_iterations": int(attempt.newton_iterations),
-            "contact_event_restarts": int(attempt.contact_event_restarts),
-            "normalized_equilibrium_residual": float(
-                attempt.normalized_equilibrium_residual
-            ),
-            "normalized_maximum_penetration": float(
-                attempt.normalized_maximum_penetration
-            ),
-        }
-        for attempt in tuple(getattr(result, "attempts", ()))
-    )
+def _attempt_rows(
+    result: object,
+    diagnostics: RotatingBlocksDiagnostics,
+) -> tuple[dict[str, object], ...]:
+    diagnostic_by_attempt = {
+        int(row["attempt"]): row for row in diagnostics.rows
+    }
+    rows: list[dict[str, object]] = []
+    for attempt in tuple(getattr(result, "attempts", ())):
+        diagnostic = diagnostic_by_attempt[int(attempt.attempt)]
+        rows.append(
+            {
+                "attempt": int(attempt.attempt),
+                "start_parameter": float(attempt.start_parameter),
+                "target_parameter": float(attempt.target_parameter),
+                "step_size": float(attempt.step_size),
+                "action": str(attempt.action),
+                "inner_termination_reason": str(attempt.inner_termination_reason),
+                "augmentations": int(attempt.augmentations),
+                "newton_iterations": int(attempt.newton_iterations),
+                "contact_event_restarts": int(attempt.contact_event_restarts),
+                "normalized_equilibrium_residual": float(
+                    attempt.normalized_equilibrium_residual
+                ),
+                "normalized_maximum_penetration": float(
+                    attempt.normalized_maximum_penetration
+                ),
+                **{
+                    key: value
+                    for key, value in diagnostic.items()
+                    if key
+                    not in {
+                        "attempt",
+                        "action",
+                        "start_parameter",
+                        "target_parameter",
+                        "inner_termination_reason",
+                        "augmentation_iterations",
+                        "newton_iterations",
+                        "contact_event_restarts",
+                    }
+                },
+            }
+        )
+    return tuple(rows)
 
 
 def _event_counts(event_rows: tuple[dict[str, object], ...]) -> dict[str, int]:
@@ -191,8 +227,9 @@ def _summary(
     accepted_rows: tuple[dict[str, object], ...],
     attempt_rows: tuple[dict[str, object], ...],
     event_rows: tuple[dict[str, object], ...],
+    diagnostics: RotatingBlocksDiagnostics,
 ) -> dict[str, object]:
-    diagnostics = analyze_restart_diagnostics(result)
+    restart_diagnostics = analyze_restart_diagnostics(result)
     accepted_attempts = tuple(row for row in attempt_rows if row["action"] == "accepted")
     max_residual = max(
         (float(row["normalized_equilibrium_residual"]) for row in accepted_attempts),
@@ -204,6 +241,7 @@ def _summary(
     )
     final_parameter = float(getattr(result, "load_factor", 0.0))
     event_counts = _event_counts(event_rows)
+    solver_diagnostics = diagnostics.summary
     criteria = {
         "solver_converged": bool(getattr(result, "converged", False)),
         "final_motion_reached": bool(
@@ -215,9 +253,15 @@ def _summary(
         ),
         "scale_aware_residuals_satisfied": max_residual <= 1.0e-8,
         "scale_aware_penetration_satisfied": max_penetration <= 1.0e-7,
-        "restart_history_healthy": diagnostics.healthy,
+        "restart_history_healthy": restart_diagnostics.healthy,
         "repeated_pair_entries": event_counts["pair_entries"] >= 2,
         "repeated_pair_exits": event_counts["pair_exits"] >= 2,
+        "solver_diagnostics_complete": bool(
+            solver_diagnostics["diagnostics_complete"]
+        ),
+        "sparse_backend_policy_satisfied": bool(
+            solver_diagnostics["sparse_profile_avoided_dense_materialization"]
+        ),
     }
     return {
         "schema_version": SCHEMA,
@@ -233,7 +277,8 @@ def _summary(
         "maximum_normalized_equilibrium_residual": max_residual,
         "maximum_normalized_penetration": max_penetration,
         "events": event_counts,
-        "restart_diagnostics": diagnostics.summary(),
+        "restart_diagnostics": restart_diagnostics.summary(),
+        "solver_diagnostics": solver_diagnostics,
     }
 
 
@@ -247,16 +292,30 @@ def run(
 
     selected = rotating_blocks_execution_profile(profile)
     model = build_rotating_blocks_model(selected.model_profile)
+    started = perf_counter()
     result = _solver(
         model.problem,
         model.path.end_parameter,
         path=model.path,
         options=solver_options(selected),
     )
+    wall_seconds = perf_counter() - started
+    diagnostics = collect_solver_diagnostics(
+        result,
+        profile=selected.name,
+        wall_seconds=wall_seconds,
+    )
     accepted_rows = _accepted_rows(result, model.controlled_nodes)
-    attempt_rows = _attempt_rows(result)
+    attempt_rows = _attempt_rows(result, diagnostics)
     event_rows = tuple(result.event_rows())
-    summary = _summary(selected, result, accepted_rows, attempt_rows, event_rows)
+    summary = _summary(
+        selected,
+        result,
+        accepted_rows,
+        attempt_rows,
+        event_rows,
+        diagnostics,
+    )
     completed = RotatingBlocksSolverRun(
         selected,
         result,
@@ -264,6 +323,7 @@ def run(
         accepted_rows,
         attempt_rows,
         event_rows,
+        diagnostics.rows,
     )
     if raise_on_failure and not completed.passed:
         criteria = summary["criteria"]
