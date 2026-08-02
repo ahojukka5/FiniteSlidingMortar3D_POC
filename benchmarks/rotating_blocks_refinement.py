@@ -91,7 +91,7 @@ def _interpolate(
 
 
 def _relative_error(reference: np.ndarray, value: np.ndarray) -> np.ndarray:
-    scale = np.maximum(np.abs(reference), 1.0e-14)
+    scale = max(float(np.max(np.abs(reference), initial=0.0)), 1.0e-14)
     return np.abs(value - reference) / scale
 
 
@@ -215,8 +215,7 @@ def _summary(
         ),
         "final_contact_state_matches": all(
             int(row["active_rows"]) == int(final_states[-1]["active_rows"])
-            and int(row["supported_rows"])
-            == int(final_states[-1]["supported_rows"])
+            and int(row["supported_rows"]) == int(final_states[-1]["supported_rows"])
             and int(row["facet_pairs"]) == int(final_states[-1]["facet_pairs"])
             for row in final_states[:-1]
         ),
