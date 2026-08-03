@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -27,6 +31,7 @@ jobs:
     name: Lint and test (Python 3.12)
     needs: guard-self-hosted
     runs-on: self-hosted
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
