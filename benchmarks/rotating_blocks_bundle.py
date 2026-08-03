@@ -228,9 +228,15 @@ def write_bundle(
     required.extend(
         write_retention_artifacts(writer, output, assessed_retention)
     )
-    required.extend(
-        write_mesh_quality_artifacts(writer, output, assessed_quality)
+    quality_paths = write_mesh_quality_artifacts(
+        writer,
+        output,
+        assessed_quality,
     )
+    for path in quality_paths:
+        if path.endswith(".svg"):
+            writer.register(path, "svg")
+    required.extend(quality_paths)
     gate = evaluate_acceptance_gate(
         completed,
         refinement,
