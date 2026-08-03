@@ -97,7 +97,8 @@ def rotating_blocks_execution_profile(
 
     if isinstance(name, RotatingBlocksExecutionProfile):
         return name
+    key = str(getattr(name, "name", name))
     try:
-        return PROFILES[str(name)]
+        return PROFILES[key]
     except KeyError as error:
         raise ValueError("rotating-blocks profile must be 'quick' or 'full'") from error
