@@ -139,8 +139,8 @@ def _quality_row(
     energy = np.asarray([item.energy_density for item in evaluations], dtype=float)
     if not np.all(np.isfinite(jacobians)) or not np.all(np.isfinite(energy)):
         raise ValueError("mesh-quality fields must be finite")
-    shear = float(model.problem.material.shear_modulus)
-    normalized_energy = energy / shear
+
+    normalized_energy = energy / float(model.problem.material.shear_modulus)
     minimum_index = int(np.argmin(jacobians))
     maximum_index = int(np.argmax(normalized_energy))
     minimum_body, minimum_local = _element_location(model, minimum_index)
@@ -153,13 +153,10 @@ def _quality_row(
         or maximum_normalized_energy
         > thresholds.failure_normalized_energy_density
     )
-    warning = (
-        not failed
-        and (
-            minimum_jacobian <= thresholds.warning_minimum_jacobian
-            or maximum_normalized_energy
-            > thresholds.warning_normalized_energy_density
-        )
+    warning = not failed and (
+        minimum_jacobian <= thresholds.warning_minimum_jacobian
+        or maximum_normalized_energy
+        > thresholds.warning_normalized_energy_density
     )
     status = "failed" if failed else "warning" if warning else "accepted"
     return {
@@ -364,8 +361,7 @@ def compare_mesh_quality_refinement(
     criteria = {
         "all_levels_passed": all(history.passed for history in histories),
         "minimum_jacobian_history_agrees": (
-            maximum_jacobian
-            <= limits.maximum_refinement_jacobian_difference
+            maximum_jacobian <= limits.maximum_refinement_jacobian_difference
         ),
         "normalized_energy_history_agrees": (
             maximum_energy <= limits.maximum_refinement_energy_difference
@@ -397,8 +393,9 @@ def evaluate_mesh_quality(
     criteria = {
         "production_mesh_quality_passed": history.passed,
         "refinement_mesh_quality_passed": compared.passed,
-        "production_evidence_complete": len(history.rows)
-        == len(tuple(completed.accepted_rows)),
+        "production_evidence_complete": (
+            len(history.rows) == len(tuple(completed.accepted_rows))
+        ),
     }
     summary = {
         "schema_version": SCHEMA,
@@ -492,4 +489,6 @@ def write_mesh_quality_artifacts(
             ),
         ),
     )
+    writer.register(paths[3], "svg")
+    writer.register(paths[4], "svg")
     return paths
