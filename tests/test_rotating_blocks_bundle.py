@@ -209,6 +209,7 @@ def _fixtures():
         SimpleNamespace(requested_steps=32, run=completed),
     )
     refinement = SimpleNamespace(
+        profile=profile,
         levels=levels,
         comparison_parameters=(0.25, 0.625, 1.0),
         comparison_rows=comparison_rows,
@@ -273,6 +274,7 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert summary["passed"]
     assert summary["balance_summary"]["passed"]
     assert summary["pressure_summary"]["passed"]
+    assert summary["mesh_quality_summary"]["passed"]
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     validate_benchmark_manifest(manifest, root=tmp_path)
     paths = {record["path"] for record in manifest["artifacts"]}
@@ -283,6 +285,11 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert "tables/pressure-aggregates.csv" in paths
     assert "tables/refinement-pressure-nodes.csv" in paths
     assert "tables/refinement-pressure-aggregates.csv" in paths
+    assert "tables/mesh-quality.csv" in paths
+    assert "tables/refinement-mesh-quality.csv" in paths
+    assert "mesh-quality.json" in paths
+    assert "plots/mesh-quality.svg" in paths
+    assert "plots/mesh-quality-refinement.svg" in paths
     assert "plots/pressure-redistribution.svg" in paths
     assert "plots/pressure-centroid-history.svg" in paths
     assert "plots/pressure-refinement-errors.svg" in paths
@@ -291,6 +298,12 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert "plots/balance-worst-states.svg" in paths
     assert "checkpoints/03-final/volume.vtu" in paths
     assert "checkpoints/03-final/projected-overlap.vtp" in paths
+
+    volume = ElementTree.parse(tmp_path / "checkpoints/03-final/volume.vtu").getroot()
+    volume_names = {
+        element.attrib.get("Name") for element in volume.iter("DataArray")
+    }
+    assert {"jacobian", "energy_density"} <= volume_names
 
     slave = ElementTree.parse(
         tmp_path / "checkpoints/03-final/slave-contact.vtp"
