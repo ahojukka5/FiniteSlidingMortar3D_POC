@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import sys
@@ -107,6 +108,7 @@ def _fixtures():
     model = BUNDLE.build_rotating_blocks_model(profile.model_profile)
     steps = (
         _step(model, 0.25),
+        _step(model, 0.4375),
         _step(model, 0.625),
         _step(model, 1.0, evaluation_parameter=0.625),
     )
@@ -140,7 +142,7 @@ def _fixtures():
             "event_localization_batches": 1,
             "dense_materializations": 0,
         }
-        for index in range(1, 4)
+        for index in range(1, len(steps) + 1)
     )
     event_rows = tuple(
         {
@@ -211,7 +213,7 @@ def _fixtures():
     refinement = SimpleNamespace(
         profile=profile,
         levels=levels,
-        comparison_parameters=(0.25, 0.625, 1.0),
+        comparison_parameters=(0.25, 0.4375, 0.625, 1.0),
         comparison_rows=comparison_rows,
         event_rows=refinement_events,
         summary={
@@ -244,20 +246,54 @@ def _balance(completed) -> object:
 def test_checkpoint_selection_covers_required_physical_regimes() -> None:
     model, completed, _ = _fixtures()
 
-    checkpoints = BUNDLE.select_checkpoints(model, completed)
+    selection = BUNDLE.select_checkpoint_regimes(model, completed)
+    checkpoints = selection.checkpoints
 
+    assert selection.complete
     assert [checkpoint.name for checkpoint in checkpoints] == [
         "pre-contact",
+        "first-contact",
         "compressed",
-        "mid-rotation",
+        "quarter-rotation",
+        "half-rotation",
         "final",
     ]
     assert [checkpoint.parameter for checkpoint in checkpoints] == [
         0.0,
         0.25,
+        0.25,
+        0.4375,
         0.625,
         1.0,
     ]
+    rows = BUNDLE.checkpoint_selection_rows(selection)
+    assert [row["accepted_step"] for row in rows] == [None, 1, 1, 2, 3, 4]
+    assert all(row["selection_rule"] for row in rows)
+    assert all(row["present"] for row in rows)
+
+
+def test_checkpoint_selection_reports_missing_first_contact() -> None:
+    model, completed, _ = _fixtures()
+    rows = tuple(
+        {
+            **row,
+            "maximum_pressure": 0.0,
+            "active_rows": 0,
+        }
+        for row in completed.accepted_rows
+    )
+    missing_contact = SimpleNamespace(**{**vars(completed), "accepted_rows": rows})
+
+    selection = BUNDLE.select_checkpoint_regimes(model, missing_contact)
+    evidence = BUNDLE.checkpoint_selection_rows(selection)
+    first_contact = next(
+        row for row in evidence if row["checkpoint"] == "first-contact"
+    )
+
+    assert not selection.complete
+    assert not first_contact["present"]
+    assert first_contact["accepted_step"] is None
+    assert "active contact pressure" in first_contact["missing_reason"]
 
 
 def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> None:
@@ -275,6 +311,8 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert summary["balance_summary"]["passed"]
     assert summary["pressure_summary"]["passed"]
     assert summary["mesh_quality_summary"]["passed"]
+    assert len(summary["checkpoint_selection"]) == 6
+    assert summary["table_row_counts"]["checkpoint_exports"] == 6
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     validate_benchmark_manifest(manifest, root=tmp_path)
     paths = {record["path"] for record in manifest["artifacts"]}
@@ -296,17 +334,36 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert "plots/force-balance.svg" in paths
     assert "plots/moment-balance.svg" in paths
     assert "plots/balance-worst-states.svg" in paths
-    assert "checkpoints/03-final/volume.vtu" in paths
-    assert "checkpoints/03-final/projected-overlap.vtp" in paths
+    assert "checkpoints/05-final/volume.vtu" in paths
+    assert "checkpoints/05-final/projected-overlap.vtp" in paths
 
-    volume = ElementTree.parse(tmp_path / "checkpoints/03-final/volume.vtu").getroot()
+    with (tmp_path / "tables/checkpoints.csv").open(newline="") as stream:
+        checkpoint_rows = tuple(csv.DictReader(stream))
+    assert [row["checkpoint"] for row in checkpoint_rows] == [
+        "pre-contact",
+        "first-contact",
+        "compressed",
+        "quarter-rotation",
+        "half-rotation",
+        "final",
+    ]
+    assert [row["accepted_step"] for row in checkpoint_rows] == [
+        "",
+        "1",
+        "1",
+        "2",
+        "3",
+        "4",
+    ]
+
+    volume = ElementTree.parse(tmp_path / "checkpoints/05-final/volume.vtu").getroot()
     volume_names = {
         element.attrib.get("Name") for element in volume.iter("DataArray")
     }
     assert {"jacobian", "energy_density"} <= volume_names
 
     slave = ElementTree.parse(
-        tmp_path / "checkpoints/03-final/slave-contact.vtp"
+        tmp_path / "checkpoints/05-final/slave-contact.vtp"
     ).getroot()
     names = {element.attrib.get("Name") for element in slave.iter("DataArray")}
     assert {
@@ -319,7 +376,7 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     } <= names
 
     master = ElementTree.parse(
-        tmp_path / "checkpoints/03-final/master-contact.vtp"
+        tmp_path / "checkpoints/05-final/master-contact.vtp"
     ).getroot()
     master_names = {
         element.attrib.get("Name") for element in master.iter("DataArray")
@@ -327,7 +384,7 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
     assert {"contact_force", "overlap_area"} <= master_names
 
     projected = ElementTree.parse(
-        tmp_path / "checkpoints/03-final/projected-overlap.vtp"
+        tmp_path / "checkpoints/05-final/projected-overlap.vtp"
     ).getroot()
     projected_names = {
         element.attrib.get("Name") for element in projected.iter("DataArray")
