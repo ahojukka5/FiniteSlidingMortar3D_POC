@@ -9,6 +9,11 @@ from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 
 import numpy as np
+from rotating_blocks_balance import (
+    RotatingBlocksBalance,
+    audit_accepted_states,
+    write_balance_plots,
+)
 from rotating_blocks_bundle_data import (
     checkpoint_rows,
     interface_rows,
@@ -43,6 +48,7 @@ def _write_tables(
     writer: BenchmarkArtifactWriter,
     completed: RotatingBlocksSolverRun,
     refinement: RotatingBlocksRefinement,
+    balance: RotatingBlocksBalance,
     checkpoints: tuple[object, ...],
 ) -> tuple[list[str], tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
     selected_rows = checkpoint_rows(checkpoints)
@@ -72,6 +78,12 @@ def _write_tables(
             "tables/events.csv",
             completed.event_rows,
             "contact3d-rotating-blocks-events/v1",
+        ),
+        _csv(
+            writer,
+            "tables/force-moment-balance.csv",
+            balance.rows,
+            "contact3d-rotating-blocks-balance/v1",
         ),
         _csv(
             writer,
@@ -112,10 +124,15 @@ def write_bundle(
     model: RotatingBlocksModel,
     completed: RotatingBlocksSolverRun,
     refinement: RotatingBlocksRefinement,
+    *,
+    balance: RotatingBlocksBalance | None = None,
 ) -> dict[str, object]:
     """Write and manifest-validate one complete result directory."""
 
     output = Path(output)
+    assessed_balance = (
+        audit_accepted_states(model, completed) if balance is None else balance
+    )
     writer = BenchmarkArtifactWriter(
         output,
         "rotating-blocks",
@@ -124,6 +141,8 @@ def write_bundle(
             "profile": completed.profile,
             "solver": solver_options(completed.profile),
             "refinement_steps": refinement.summary["requested_steps"],
+            "balance_force_tolerance": assessed_balance.summary["force_tolerance"],
+            "balance_moment_tolerance": assessed_balance.summary["moment_tolerance"],
         },
         repo_root=Path(__file__).resolve().parents[1],
     )
@@ -132,6 +151,7 @@ def write_bundle(
         writer,
         completed,
         refinement,
+        assessed_balance,
         checkpoints,
     )
     overlap_rows: list[dict[str, object]] = []
@@ -161,10 +181,14 @@ def write_bundle(
     required.extend(
         write_plots(writer, output, completed, checkpoints, final_overlays)
     )
+    required.extend(write_balance_plots(writer, output, assessed_balance))
     names = tuple(checkpoint.name for checkpoint in checkpoints)
     criteria = {
         "solver_passed": completed.passed,
         "refinement_passed": refinement.passed,
+        "force_moment_balance_passed": assessed_balance.passed,
+        "balance_evidence_complete": len(assessed_balance.rows)
+        == len(completed.accepted_rows),
         "checkpoint_regimes_complete": names
         == ("pre-contact", "compressed", "mid-rotation", "final"),
         "final_checkpoint_reached": bool(
@@ -191,12 +215,14 @@ def write_bundle(
         "criteria": criteria,
         "solver_summary": completed.summary,
         "refinement_summary": refinement.summary,
+        "balance_summary": assessed_balance.summary,
         "checkpoints": checkpoint_files,
         "table_row_counts": {
             "accepted_steps": len(completed.accepted_rows),
             "attempts": len(completed.attempt_rows),
             "solver_diagnostics": len(completed.diagnostic_rows),
             "events": len(completed.event_rows),
+            "force_moment_balance": len(assessed_balance.rows),
             "interface_rows": len(contact_rows),
             "facet_pairs": len(pairs),
             "overlap_regions": len(overlap_rows),
@@ -217,7 +243,7 @@ def run(
     _solver_runner: SolverRunner = run_solver,
     _refinement_runner: RefinementRunner = run_refinement,
 ) -> dict[str, object]:
-    """Execute production, refinement, and complete artifact export."""
+    """Execute production, refinement, balance, and complete artifact export."""
 
     completed = _solver_runner(profile)
     refinement = _refinement_runner(profile)
