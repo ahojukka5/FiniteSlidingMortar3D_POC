@@ -33,6 +33,14 @@ BENCHMARKS = {
     "topology-events": "topology_event_regression.py",
     "broad-phase-scaling": "broad_phase_scaling.py",
     "linear-solver-scaling": "linear_solver_scaling.py",
+    "rotating-blocks": "rotating_blocks_bundle.py",
+}
+
+PROFILE_SCRIPTS = {
+    "rotating-blocks": {
+        "quick": "rotating_blocks_quick.py",
+        "full": "rotating_blocks_bundle.py",
+    },
 }
 
 QUICK_ARGUMENTS = {
@@ -54,6 +62,12 @@ QUICK_ARGUMENTS = {
     ),
 }
 
+PROFILE_ARGUMENTS = {
+    "rotating-blocks": {
+        "full": ("--profile", "full"),
+    },
+}
+
 GOLDEN_SUITE_SCHEMA_VERSION = "contact3d-golden-suite/v1"
 
 
@@ -67,6 +81,10 @@ def _not_configured_report(name: str, profile: str) -> dict[str, object]:
         "metric_count": 0,
         "metrics": {},
     }
+
+
+def _benchmark_script(name: str, profile: str) -> str:
+    return PROFILE_SCRIPTS.get(name, {}).get(profile, BENCHMARKS[name])
 
 
 def run(
@@ -99,10 +117,11 @@ def run(
         destination = output / name
         command = [
             sys.executable,
-            str(root / BENCHMARKS[name]),
+            str(root / _benchmark_script(name, profile)),
             "--output",
             str(destination),
         ]
+        command.extend(PROFILE_ARGUMENTS.get(name, {}).get(profile, ()))
         if quick:
             command.extend(QUICK_ARGUMENTS.get(name, ()))
         completed = subprocess.run(command, check=False)

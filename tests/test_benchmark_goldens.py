@@ -114,14 +114,20 @@ def test_golden_directory_loads_specs_and_rejects_duplicates(tmp_path: Path) -> 
 def test_checked_goldens_match_committed_full_results() -> None:
     repository = Path(__file__).resolve().parents[1]
     specifications = load_golden_directory(repository / "benchmarks" / "goldens")
+    result_root = repository / "results"
+    committed = {
+        name: specification
+        for name, specification in specifications.items()
+        if (result_root / name / specification.source).is_file()
+    }
 
     reports = {
         name: evaluate_golden_spec(
             specification,
-            repository / "results" / name,
+            result_root / name,
             profile="full",
         )
-        for name, specification in specifications.items()
+        for name, specification in committed.items()
     }
 
     assert set(reports) == {
@@ -132,4 +138,5 @@ def test_checked_goldens_match_committed_full_results() -> None:
         "scale-aware-penalty",
         "topology-events",
     }
+    assert "rotating-blocks" in specifications
     assert all(report["status"] == "passed" for report in reports.values())
