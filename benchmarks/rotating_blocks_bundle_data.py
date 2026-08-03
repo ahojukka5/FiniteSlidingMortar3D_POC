@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -11,6 +11,15 @@ from rotating_blocks_solver import RotatingBlocksSolverRun
 
 from contact3d import build_facet_overlap
 from contact3d.coupled import evaluate_coupled_equilibrium
+
+CHECKPOINT_NAMES = (
+    "pre-contact",
+    "first-contact",
+    "compressed",
+    "quarter-rotation",
+    "half-rotation",
+    "final",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,10 +34,28 @@ class Checkpoint:
     evaluation: object
     reaction: np.ndarray
     path_state: object
+    accepted_step: int | None
+    selection_rule: str
 
     @property
     def selection_error(self) -> float:
         return abs(self.parameter - self.target)
+
+
+@dataclass(frozen=True, slots=True)
+class CheckpointSelection:
+    """Selected checkpoints plus explicit records for missing regimes."""
+
+    checkpoints: tuple[Checkpoint, ...]
+    requests: tuple[dict[str, object], ...]
+
+    @property
+    def complete(self) -> bool:
+        return all(bool(request["present"]) for request in self.requests)
+
+    @property
+    def missing(self) -> tuple[dict[str, object], ...]:
+        return tuple(request for request in self.requests if not request["present"])
 
 
 def _reaction(evaluation: object) -> np.ndarray:
@@ -62,10 +89,18 @@ def _initial_checkpoint(model: RotatingBlocksModel) -> Checkpoint:
         evaluation,
         _reaction(evaluation),
         state,
+        None,
+        "reference state before the staged motion",
     )
 
 
-def _accepted_checkpoint(name: str, target: float, step: object) -> Checkpoint:
+def _accepted_checkpoint(
+    name: str,
+    target: float,
+    source: Mapping[str, object],
+    step: object,
+    selection_rule: str,
+) -> Checkpoint:
     result = step.result
     evaluation = result.equilibrium.evaluation
     reaction = getattr(step, "reaction", None)
@@ -80,32 +115,230 @@ def _accepted_checkpoint(name: str, target: float, step: object) -> Checkpoint:
         if reaction is None
         else np.asarray(reaction, dtype=float).reshape(-1).copy(),
         step.path_state,
+        int(source["accepted_step"]),
+        selection_rule,
     )
+
+
+def _accepted_records(
+    completed: RotatingBlocksSolverRun,
+) -> tuple[tuple[dict[str, object], object], ...]:
+    rows = tuple(dict(row) for row in getattr(completed, "accepted_rows", ()))
+    steps = tuple(getattr(getattr(completed, "result", None), "accepted_steps", ()))
+    if len(rows) != len(steps):
+        raise ValueError("accepted-step rows and solver states must be aligned")
+    records: list[tuple[dict[str, object], object]] = []
+    for ordinal, (row, step) in enumerate(zip(rows, steps, strict=True), start=1):
+        row.setdefault("accepted_step", ordinal)
+        row_parameter = float(row["parameter"])
+        step_parameter = float(step.parameter)
+        if not np.isclose(row_parameter, step_parameter, rtol=0.0, atol=1.0e-12):
+            raise ValueError("accepted-step table does not match solver state parameter")
+        records.append((row, step))
+    return tuple(records)
+
+
+def _nearest_record(
+    records: Sequence[tuple[dict[str, object], object]],
+    target: float,
+) -> tuple[dict[str, object], object] | None:
+    if not records:
+        return None
+    return min(
+        records,
+        key=lambda record: (
+            abs(float(record[0]["parameter"]) - target),
+            float(record[0]["parameter"]),
+            int(record[0]["accepted_step"]),
+        ),
+    )
+
+
+def _request(
+    name: str,
+    target: float,
+    selection_rule: str,
+    checkpoint: Checkpoint | None,
+    missing_reason: str = "",
+) -> dict[str, object]:
+    return {
+        "checkpoint": name,
+        "target_parameter": target,
+        "selection_rule": selection_rule,
+        "present": checkpoint is not None,
+        "missing_reason": "" if checkpoint is not None else missing_reason,
+    }
+
+
+def select_checkpoint_regimes(
+    model: RotatingBlocksModel,
+    completed: RotatingBlocksSolverRun,
+) -> CheckpointSelection:
+    """Select all requested physical regimes and retain missing-state records."""
+
+    records = _accepted_records(completed)
+    compression = float(model.geometry.compression_end)
+    end_parameter = float(model.path.end_parameter)
+    quarter_rotation = compression + 0.25 * (end_parameter - compression)
+    half_rotation = compression + 0.50 * (end_parameter - compression)
+    checkpoints: list[Checkpoint] = [_initial_checkpoint(model)]
+    requests: list[dict[str, object]] = [
+        _request(
+            "pre-contact",
+            0.0,
+            "reference state before the staged motion",
+            checkpoints[0],
+        )
+    ]
+
+    first_rule = "earliest accepted state with overlap and active pressure"
+    first_candidates = tuple(
+        record
+        for record in records
+        if float(record[0].get("overlap_area", 0.0)) > 0.0
+        and int(record[0].get("supported_rows", 0)) > 0
+        and (
+            int(record[0].get("active_rows", 0)) > 0
+            or float(record[0].get("maximum_pressure", 0.0)) > 0.0
+        )
+    )
+    first_record = min(
+        first_candidates,
+        key=lambda record: (
+            float(record[0]["parameter"]),
+            int(record[0]["accepted_step"]),
+        ),
+        default=None,
+    )
+    first = (
+        None
+        if first_record is None
+        else _accepted_checkpoint(
+            "first-contact",
+            float(first_record[0]["parameter"]),
+            first_record[0],
+            first_record[1],
+            first_rule,
+        )
+    )
+    if first is not None:
+        checkpoints.append(first)
+    requests.append(
+        _request(
+            "first-contact",
+            float(first_record[0]["parameter"]) if first_record is not None else 0.0,
+            first_rule,
+            first,
+            "no accepted state contains overlap with active contact pressure",
+        )
+    )
+
+    compressed_rule = "nearest accepted state to the compression phase boundary"
+    compressed_record = _nearest_record(records, compression)
+    compressed = (
+        None
+        if compressed_record is None
+        else _accepted_checkpoint(
+            "compressed",
+            compression,
+            compressed_record[0],
+            compressed_record[1],
+            compressed_rule,
+        )
+    )
+    if compressed is not None:
+        checkpoints.append(compressed)
+    requests.append(
+        _request(
+            "compressed",
+            compression,
+            compressed_rule,
+            compressed,
+            "no accepted nonlinear state is available",
+        )
+    )
+
+    rotation_records = tuple(
+        record for record in records if int(record[0].get("phase_index", -1)) == 1
+    )
+    for name, fraction, target in (
+        ("quarter-rotation", 0.25, quarter_rotation),
+        ("half-rotation", 0.50, half_rotation),
+    ):
+        rule = f"nearest accepted rotation state to {fraction:.0%} rotation"
+        record = _nearest_record(rotation_records, target)
+        checkpoint = (
+            None
+            if record is None
+            else _accepted_checkpoint(
+                name,
+                target,
+                record[0],
+                record[1],
+                rule,
+            )
+        )
+        if checkpoint is not None:
+            checkpoints.append(checkpoint)
+        requests.append(
+            _request(
+                name,
+                target,
+                rule,
+                checkpoint,
+                "no accepted rotation-phase state is available",
+            )
+        )
+
+    final_rule = "accepted state at the completed prescribed motion"
+    final_record = _nearest_record(records, end_parameter)
+    final = None
+    if final_record is not None:
+        tolerance = max(
+            float(getattr(getattr(completed, "profile", None), "minimum_step", 0.0)),
+            1.0e-12,
+        )
+        if np.isclose(
+            float(final_record[0]["parameter"]),
+            end_parameter,
+            rtol=0.0,
+            atol=tolerance,
+        ):
+            final = _accepted_checkpoint(
+                "final",
+                end_parameter,
+                final_record[0],
+                final_record[1],
+                final_rule,
+            )
+    if final is not None:
+        checkpoints.append(final)
+    requests.append(
+        _request(
+            "final",
+            end_parameter,
+            final_rule,
+            final,
+            "the accepted path does not reach the prescribed final parameter",
+        )
+    )
+
+    ordered = tuple(
+        checkpoint
+        for name in CHECKPOINT_NAMES
+        for checkpoint in checkpoints
+        if checkpoint.name == name
+    )
+    return CheckpointSelection(ordered, tuple(requests))
 
 
 def select_checkpoints(
     model: RotatingBlocksModel,
     completed: RotatingBlocksSolverRun,
 ) -> tuple[Checkpoint, ...]:
-    """Select pre-contact, compressed, intermediate, and final states."""
+    """Return the available requested checkpoints in deterministic order."""
 
-    steps = tuple(getattr(completed.result, "accepted_steps", ()))
-    if not steps:
-        raise ValueError("rotating-blocks result contains no accepted steps")
-    compression = float(model.geometry.compression_end)
-    targets = (
-        ("compressed", compression),
-        ("mid-rotation", compression + 0.5 * (1.0 - compression)),
-        ("final", float(model.path.end_parameter)),
-    )
-    checkpoints = [_initial_checkpoint(model)]
-    for name, target in targets:
-        step = min(
-            steps,
-            key=lambda item: (abs(float(item.parameter) - target), float(item.parameter)),
-        )
-        checkpoints.append(_accepted_checkpoint(name, target, step))
-    return tuple(checkpoints)
+    return select_checkpoint_regimes(model, completed).checkpoints
 
 
 def contact(checkpoint: Checkpoint) -> object:
@@ -156,7 +389,9 @@ def checkpoint_rows(
         rows.append(
             {
                 "checkpoint": checkpoint.name,
+                "selection_rule": checkpoint.selection_rule,
                 "target_parameter": checkpoint.target,
+                "accepted_step": checkpoint.accepted_step,
                 "selected_parameter": checkpoint.parameter,
                 "selection_error": checkpoint.selection_error,
                 "maximum_displacement": float(
@@ -165,9 +400,43 @@ def checkpoint_rows(
                 "maximum_pressure": float(
                     np.max(evaluation.pressure, initial=0.0)
                 ),
-                "overlap_area": float(
-                    evaluation.raw.contact.weights.total_area
+                "overlap_area": float(evaluation.raw.contact.weights.total_area),
+            }
+        )
+    return tuple(rows)
+
+
+def checkpoint_selection_rows(
+    selection: CheckpointSelection,
+) -> tuple[dict[str, object], ...]:
+    """Return complete checkpoint evidence including unavailable regimes."""
+
+    physical = {row["checkpoint"]: row for row in checkpoint_rows(selection.checkpoints)}
+    rows: list[dict[str, object]] = []
+    for request in selection.requests:
+        checkpoint = str(request["checkpoint"])
+        selected = physical.get(checkpoint)
+        rows.append(
+            {
+                "checkpoint": checkpoint,
+                "selection_rule": str(request["selection_rule"]),
+                "target_parameter": float(request["target_parameter"]),
+                "present": bool(request["present"]),
+                "missing_reason": str(request["missing_reason"]),
+                "accepted_step": None if selected is None else selected["accepted_step"],
+                "selected_parameter": (
+                    None if selected is None else selected["selected_parameter"]
                 ),
+                "selection_error": (
+                    None if selected is None else selected["selection_error"]
+                ),
+                "maximum_displacement": (
+                    None if selected is None else selected["maximum_displacement"]
+                ),
+                "maximum_pressure": (
+                    None if selected is None else selected["maximum_pressure"]
+                ),
+                "overlap_area": None if selected is None else selected["overlap_area"],
             }
         )
     return tuple(rows)
