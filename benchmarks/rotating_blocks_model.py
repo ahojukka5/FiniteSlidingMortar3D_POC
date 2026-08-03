@@ -25,9 +25,9 @@ class RotatingBlocksGeometry:
 
     lower_minimum: tuple[float, float, float] = (-1.0, -1.0, 0.0)
     lower_maximum: tuple[float, float, float] = (1.0, 1.0, 0.5)
-    upper_minimum: tuple[float, float, float] = (-0.65, -0.35, 0.52)
-    upper_maximum: tuple[float, float, float] = (0.65, 0.35, 0.82)
-    pivot: tuple[float, float, float] = (0.0, 0.0, 0.52)
+    upper_minimum: tuple[float, float, float] = (-0.62, -0.32, 0.521)
+    upper_maximum: tuple[float, float, float] = (0.68, 0.38, 0.821)
+    pivot: tuple[float, float, float] = (0.03, 0.03, 0.521)
     compression: tuple[float, float, float] = (0.0, 0.0, -0.04)
     tangential_translation: tuple[float, float, float] = (0.10, 0.0, 0.0)
     final_angle: float = 0.5 * np.pi
@@ -38,6 +38,16 @@ class RotatingBlocksGeometry:
     @property
     def initial_separation(self) -> float:
         return self.upper_minimum[2] - self.lower_maximum[2]
+
+    @property
+    def contact_onset_parameter(self) -> float:
+        """Return the rigid-path parameter where the reference planes first meet."""
+
+        return (
+            self.compression_end
+            * self.initial_separation
+            / -float(self.compression[2])
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,7 +65,7 @@ class RotatingBlocksProfile:
             raise ValueError("rotating-blocks mesh cell counts must be positive")
 
 
-QUICK_PROFILE = RotatingBlocksProfile("quick", (4, 4, 2), (3, 2, 1))
+QUICK_PROFILE = RotatingBlocksProfile("quick", (2, 2, 1), (3, 2, 1))
 FULL_PROFILE = RotatingBlocksProfile("full", (8, 8, 4), (3, 2, 1))
 PROFILES = {profile.name: profile for profile in (QUICK_PROFILE, FULL_PROFILE)}
 
@@ -201,6 +211,10 @@ def _validate_model(model: RotatingBlocksModel) -> None:
         raise ValueError("rotating-blocks contact surfaces must start separated")
     if geometry.search_distance <= model.initial_separation:
         raise ValueError("contact search distance must exceed the initial separation")
+    if geometry.compression[2] >= 0.0:
+        raise ValueError("rotating-blocks compression must approach the master plane")
+    if not 0.0 < geometry.contact_onset_parameter < geometry.compression_end:
+        raise ValueError("contact onset must occur inside the compression phase")
     if np.intersect1d(model.fixed_nodes, model.controlled_nodes).size:
         raise ValueError("fixed and controlled rotating-blocks nodes must be disjoint")
 
