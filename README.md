@@ -45,19 +45,20 @@ The first target is the frictionless large-deformation segment-to-segment formul
 - bounded interface-local normal-penalty adaptation with explicit update reasons;
 - warped nonmatching production-adapter tangent regression;
 - fully coupled warped nonmatching contact-onset continuation benchmark;
+- production rotating-blocks benchmark with changing overlap topology;
 - versioned benchmark manifests with Git, runtime, package, seed, and solver provenance;
 - ParaView-readable TET4 volume, contact-surface, and projected-overlap VTK output;
 - reusable validated SVG line, bar, event, polygon, mesh, and sparsity plots;
 - checked profile-aware numeric golden specifications with explicit tolerances;
 - standardized patch, bulk, coupled, adaptive-policy, adaptive-event, mixed-path, onset,
-  scale-aware, production-interface, warped production-onset, topology-event, BVH, and
-  linear-solver benchmark suite;
+  scale-aware, production-interface, warped production-onset, topology-event, BVH,
+  linear-solver, and rotating-overlap benchmark suite;
 - machine-readable patch, nonlinear, coupled, continuation, scaling, event, search, solver,
   and golden-regression artifacts;
 - force and moment balance diagnostics;
 - retained numerical operator and residual-tangent oracles.
 
-The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers and exercised by a reproducible medium coupled scaling study. `HEX8` elements, friction, production rotating-overlap validation, generalized clipping-event derivatives beyond one-sided branch selection, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
+The package solves verification-sized coupled moving-overlap contact boundary-value problems. Sparse linear backends are wired into the bulk, coupled-contact, and event-localized Newton drivers and exercised by a reproducible medium coupled scaling study. The rotating-blocks campaign exercises the production event-aware solver through repeated overlap-topology changes with quick and publication-oriented full profiles. `HEX8` elements, friction, generalized clipping-event derivatives beyond one-sided branch selection, and dual multiplier spaces are tracked in [the implementation plan](docs/implementation-plan.md).
 
 The residual equations and normalization boundary are documented in [the frictionless contact note](docs/frictionless-contact-residual.md). The tangent decomposition is documented in [the linearization note](docs/consistent-linearization.md), [the moving-overlap note](docs/moving-overlap-tangent.md), [the projection-plane note](docs/projection-plane-linearization.md), [the clipping note](docs/clipping-linearization.md), [the pallet note](docs/pallet-linearization.md), [the inverse-map note](docs/inverse-map-linearization.md), and [the operator note](docs/operator-linearization.md). The multiplier update and KKT residuals are documented in [the augmented-Lagrange note](docs/augmented-lagrange.md). The first bulk formulation is documented in [the neo-Hookean `TET4` note](docs/tet4-neo-hookean.md), its sparse nonlinear equilibrium layer in [the equilibrium note](docs/nonlinear-equilibrium.md), the linear backend boundary in [the solver note](docs/linear-solver-backends.md), its medium coupled evidence in [the solver scaling note](docs/linear-solver-scaling.md), the coupled driver in [the coupled-equilibrium note](docs/coupled-equilibrium.md), the continuation policy in [the adaptive-contact note](docs/adaptive-contact-continuation.md), mixed boundary paths in [the path note](docs/mixed-load-paths.md), unit-consistent convergence in [the scaling note](docs/scale-aware-convergence.md), the first production boundary-value problem in [the warped-onset note](docs/warped-nonmatching-contact-onset.md), explicit topology localization in [the event note](docs/contact-topology-events.md), incremental candidate discovery in [the BVH note](docs/broad-phase-bvh.md), and versioned result directories, plots, VTK output, and golden checks in [the benchmark artifact note](docs/benchmark-artifacts.md).
 
@@ -109,6 +110,8 @@ uv run python benchmarks/warped_nonmatching_contact_onset.py --output results/wa
 uv run python benchmarks/topology_event_regression.py --output results/topology-events
 uv run python benchmarks/broad_phase_scaling.py --output results/broad-phase-scaling
 uv run python benchmarks/linear_solver_scaling.py --output results/linear-solver-scaling
+uv run python benchmarks/rotating_blocks_quick.py --output results/rotating-blocks-quick
+uv run python benchmarks/rotating_blocks_bundle.py --profile full --output results/rotating-blocks
 ```
 
 ## Principal source

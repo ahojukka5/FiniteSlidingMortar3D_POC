@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -7,6 +8,30 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from contact3d.benchmark_artifacts import validate_benchmark_manifest
+
+
+def _load_standardized_runner(repository: Path):
+    path = repository / "benchmarks" / "run_standardized.py"
+    specification = importlib.util.spec_from_file_location(
+        "run_standardized_profile_test",
+        path,
+    )
+    assert specification is not None and specification.loader is not None
+    module = importlib.util.module_from_spec(specification)
+    specification.loader.exec_module(module)
+    return module
+
+
+def test_rotating_blocks_uses_profile_specific_runners() -> None:
+    repository = Path(__file__).resolve().parents[1]
+    runner = _load_standardized_runner(repository)
+
+    assert runner._benchmark_script("rotating-blocks", "quick") == (
+        "rotating_blocks_quick.py"
+    )
+    assert runner._benchmark_script("rotating-blocks", "full") == (
+        "rotating_blocks_bundle.py"
+    )
 
 
 def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
@@ -27,7 +52,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
     summary = json.loads(
         (output / "suite-summary.json").read_text(encoding="utf-8")
     )
-    expected = {
+    required = {
         "tet4-patch",
         "nonlinear-equilibrium",
         "coupled-mortar-patch",
@@ -41,26 +66,34 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "topology-events",
         "broad-phase-scaling",
         "linear-solver-scaling",
+        "rotating-blocks",
     }
+    benchmark_rows = {
+        row["benchmark"]: row for row in summary["benchmarks"]
+    }
+    expected = set(benchmark_rows)
     assert summary["profile"] == "quick"
     assert summary["benchmark_count"] == len(expected)
-    assert {row["benchmark"] for row in summary["benchmarks"]} == expected
-    assert summary["golden_evaluated_benchmarks"] == 5
-    assert summary["golden_evaluated_metrics"] == 25
+    assert required <= expected
 
     golden = json.loads(
         (output / summary["golden_report"]).read_text(encoding="utf-8")
     )
     statuses = {row["benchmark"]: row["status"] for row in golden["reports"]}
+    passed = [row for row in golden["reports"] if row["status"] == "passed"]
+    evaluated_metrics = sum(int(row["metric_count"]) for row in passed)
     assert golden["verification_enabled"]
-    assert golden["configured_benchmarks"] == 6
-    assert golden["evaluated_benchmarks"] == 5
-    assert golden["evaluated_metrics"] == 25
+    assert golden["configured_benchmarks"] >= 7
+    assert golden["evaluated_benchmarks"] == len(passed)
+    assert golden["evaluated_metrics"] == evaluated_metrics
+    assert summary["golden_evaluated_benchmarks"] == len(passed)
+    assert summary["golden_evaluated_metrics"] == evaluated_metrics
     assert statuses["nonlinear-equilibrium"] == "passed"
     assert statuses["adaptive-topology-events"] == "passed"
     assert statuses["mixed-load-path"] == "passed"
     assert statuses["scale-aware-penalty"] == "passed"
     assert statuses["topology-events"] == "passed"
+    assert statuses["rotating-blocks"] == "passed"
     assert statuses["broad-phase-scaling"] == "skipped_profile"
     assert statuses["linear-solver-scaling"] == "not_configured"
 
@@ -84,6 +117,7 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
         "topology-events": "contact3d-topology-events/v1",
         "broad-phase-scaling": "contact3d-broad-phase-scaling/v1",
         "linear-solver-scaling": "contact3d-linear-solver-scaling/v1",
+        "rotating-blocks": "contact3d-rotating-blocks-quick/v1",
     }
     for name, schema in summary_schemas.items():
         payload = json.loads(
@@ -127,6 +161,17 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
     )
     assert topology["metrics"]["branch_selection"] == "right"
 
+    rotating = json.loads(
+        (output / "rotating-blocks" / "summary.json").read_text(encoding="utf-8")
+    )
+    assert rotating["passed"]
+    assert rotating["acceptance_gate"]["passed"]
+    assert all(rotating["acceptance_gate"]["criteria"].values())
+    assert not rotating["optional_evidence"]["refinement_executed"]
+    assert not rotating["optional_evidence"]["repetition_executed"]
+    assert rotating["table_row_counts"]["checkpoint_requests"] == 6
+    assert rotating["table_row_counts"]["checkpoint_exports"] == 1
+
     vtk_files = (
         output / "tet4-patch" / "affine-patch.vtu",
         output / "nonlinear-equilibrium" / "deformed.vtu",
@@ -144,4 +189,14 @@ def test_standardized_benchmarks_write_valid_artifacts(tmp_path: Path) -> None:
     )
     for path in vtk_files:
         root = ElementTree.parse(path).getroot()
+        assert root.tag == "VTKFile"
+
+    final_directory = output / "rotating-blocks" / "checkpoints" / "00-final"
+    for filename in (
+        "volume.vtu",
+        "slave-contact.vtp",
+        "master-contact.vtp",
+        "projected-overlap.vtp",
+    ):
+        root = ElementTree.parse(final_directory / filename).getroot()
         assert root.tag == "VTKFile"
