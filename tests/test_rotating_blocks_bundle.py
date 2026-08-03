@@ -32,6 +32,7 @@ _load_module("rotating_blocks_solver", "rotating_blocks_solver.py")
 _load_module("svg_plots", "svg_plots.py")
 BALANCE = _load_module("rotating_blocks_balance", "rotating_blocks_balance.py")
 _load_module("rotating_blocks_refinement", "rotating_blocks_refinement.py")
+_load_module("rotating_blocks_pressure", "rotating_blocks_pressure.py")
 BUNDLE = _load_module("rotating_blocks_bundle", "rotating_blocks_bundle.py")
 
 
@@ -203,7 +204,13 @@ def _fixtures():
             "absolute_error": 0.0,
         },
     )
+    levels = (
+        SimpleNamespace(requested_steps=16, run=completed),
+        SimpleNamespace(requested_steps=32, run=completed),
+    )
     refinement = SimpleNamespace(
+        levels=levels,
+        comparison_parameters=(0.25, 0.625, 1.0),
         comparison_rows=comparison_rows,
         event_rows=refinement_events,
         summary={
@@ -265,13 +272,20 @@ def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> No
 
     assert summary["passed"]
     assert summary["balance_summary"]["passed"]
+    assert summary["pressure_summary"]["passed"]
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     validate_benchmark_manifest(manifest, root=tmp_path)
     paths = {record["path"] for record in manifest["artifacts"]}
     assert "tables/interface-rows.csv" in paths
     assert "tables/refinement-fields.csv" in paths
     assert "tables/force-moment-balance.csv" in paths
+    assert "tables/pressure-nodes.csv" in paths
+    assert "tables/pressure-aggregates.csv" in paths
+    assert "tables/refinement-pressure-nodes.csv" in paths
+    assert "tables/refinement-pressure-aggregates.csv" in paths
     assert "plots/pressure-redistribution.svg" in paths
+    assert "plots/pressure-centroid-history.svg" in paths
+    assert "plots/pressure-refinement-errors.svg" in paths
     assert "plots/force-balance.svg" in paths
     assert "plots/moment-balance.svg" in paths
     assert "plots/balance-worst-states.svg" in paths
