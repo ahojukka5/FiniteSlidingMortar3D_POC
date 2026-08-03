@@ -15,10 +15,12 @@ from rotating_blocks_balance import (
     write_balance_plots,
 )
 from rotating_blocks_bundle_data import (
-    checkpoint_rows,
+    CHECKPOINT_NAMES,
+    CheckpointSelection,
+    checkpoint_selection_rows,
     interface_rows,
     pair_rows,
-    select_checkpoints,
+    select_checkpoint_regimes,
 )
 from rotating_blocks_bundle_output import write_checkpoint, write_plots
 from rotating_blocks_gate import (
@@ -70,9 +72,10 @@ def _write_tables(
     completed: RotatingBlocksSolverRun,
     refinement: RotatingBlocksRefinement,
     balance: RotatingBlocksBalance,
-    checkpoints: tuple[object, ...],
+    selection: CheckpointSelection,
 ) -> tuple[list[str], tuple[dict[str, object], ...], tuple[dict[str, object], ...]]:
-    selected_rows = checkpoint_rows(checkpoints)
+    checkpoints = selection.checkpoints
+    selected_rows = checkpoint_selection_rows(selection)
     contact_rows = interface_rows(checkpoints)
     pairs = pair_rows(checkpoints)
     required = [
@@ -110,7 +113,7 @@ def _write_tables(
             writer,
             "tables/checkpoints.csv",
             selected_rows,
-            "contact3d-rotating-blocks-checkpoints/v1",
+            "contact3d-rotating-blocks-checkpoints/v2",
         ),
         _csv(
             writer,
@@ -181,13 +184,14 @@ def write_bundle(
         },
         repo_root=Path(__file__).resolve().parents[1],
     )
-    checkpoints = select_checkpoints(model, completed)
+    selection = select_checkpoint_regimes(model, completed)
+    checkpoints = selection.checkpoints
     required, contact_rows, pairs = _write_tables(
         writer,
         completed,
         refinement,
         assessed_balance,
-        checkpoints,
+        selection,
     )
     overlap_rows: list[dict[str, object]] = []
     checkpoint_files: list[dict[str, object]] = []
@@ -199,7 +203,11 @@ def write_bundle(
         checkpoint_files.append(
             {
                 "checkpoint": checkpoint.name,
-                "parameter": checkpoint.parameter,
+                "selection_rule": checkpoint.selection_rule,
+                "target_parameter": checkpoint.target,
+                "accepted_step": checkpoint.accepted_step,
+                "selected_parameter": checkpoint.parameter,
+                "selection_error": checkpoint.selection_error,
                 "files": list(paths),
             }
         )
@@ -248,6 +256,10 @@ def write_bundle(
     gate = include_mesh_quality_in_gate(gate, assessed_quality)
     required.extend(write_gate_artifacts(writer, gate))
     names = tuple(checkpoint.name for checkpoint in checkpoints)
+    final_checkpoint = next(
+        (checkpoint for checkpoint in checkpoints if checkpoint.name == "final"),
+        None,
+    )
     rotation_count = sum(
         int(row.get("phase_index", -1)) == 1 for row in completed.accepted_rows
     )
@@ -267,10 +279,16 @@ def write_bundle(
         "mesh_quality_passed": assessed_quality.passed,
         "mesh_quality_evidence_complete": len(assessed_quality.rows)
         == len(completed.accepted_rows),
-        "checkpoint_regimes_complete": names
-        == ("pre-contact", "compressed", "mid-rotation", "final"),
-        "final_checkpoint_reached": bool(
-            np.isclose(checkpoints[-1].parameter, model.path.end_parameter)
+        "checkpoint_regimes_complete": selection.complete
+        and names == CHECKPOINT_NAMES,
+        "final_checkpoint_reached": final_checkpoint is not None
+        and bool(
+            np.isclose(
+                final_checkpoint.parameter,
+                model.path.end_parameter,
+                rtol=0.0,
+                atol=max(float(completed.profile.minimum_step), 1.0e-12),
+            )
         ),
         "interface_fields_complete": all(
             {
@@ -298,6 +316,7 @@ def write_bundle(
         "pressure_summary": pressure.summary,
         "retention_summary": assessed_retention.summary,
         "mesh_quality_summary": assessed_quality.summary,
+        "checkpoint_selection": checkpoint_selection_rows(selection),
         "checkpoints": checkpoint_files,
         "table_row_counts": {
             "accepted_steps": len(completed.accepted_rows),
@@ -309,6 +328,8 @@ def write_bundle(
             "contact_retention": len(assessed_retention.rows),
             "mesh_quality": len(assessed_quality.rows),
             "refinement_mesh_quality": len(assessed_quality.refinement.rows),
+            "checkpoint_requests": len(selection.requests),
+            "checkpoint_exports": len(checkpoints),
             "interface_rows": len(contact_rows),
             "facet_pairs": len(pairs),
             "overlap_regions": len(overlap_rows),
