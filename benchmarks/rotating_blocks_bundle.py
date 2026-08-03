@@ -21,6 +21,12 @@ from rotating_blocks_bundle_data import (
     select_checkpoints,
 )
 from rotating_blocks_bundle_output import write_checkpoint, write_plots
+from rotating_blocks_gate import (
+    acceptance_failure_message,
+    acceptance_thresholds,
+    evaluate_acceptance_gate,
+    write_gate_artifacts,
+)
 from rotating_blocks_model import RotatingBlocksModel, build_rotating_blocks_model
 from rotating_blocks_pressure import PressureArtifacts, write_pressure_artifacts
 from rotating_blocks_refinement import RotatingBlocksRefinement
@@ -127,6 +133,7 @@ def write_bundle(
     refinement: RotatingBlocksRefinement,
     *,
     balance: RotatingBlocksBalance | None = None,
+    determinism: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Write and manifest-validate one complete result directory."""
 
@@ -144,6 +151,7 @@ def write_bundle(
             "refinement_steps": refinement.summary["requested_steps"],
             "balance_force_tolerance": assessed_balance.summary["force_tolerance"],
             "balance_moment_tolerance": assessed_balance.summary["moment_tolerance"],
+            "acceptance_thresholds": acceptance_thresholds(completed.profile),
         },
         repo_root=Path(__file__).resolve().parents[1],
     )
@@ -191,8 +199,17 @@ def write_bundle(
         refinement,
     )
     required.extend(pressure.required)
+    gate = evaluate_acceptance_gate(
+        completed,
+        refinement,
+        assessed_balance.summary,
+        pressure.summary,
+        determinism=determinism,
+    )
+    required.extend(write_gate_artifacts(writer, gate))
     names = tuple(checkpoint.name for checkpoint in checkpoints)
     criteria = {
+        "acceptance_gate_passed": gate.passed,
         "solver_passed": completed.passed,
         "refinement_passed": refinement.passed,
         "force_moment_balance_passed": assessed_balance.passed,
@@ -225,6 +242,7 @@ def write_bundle(
         "profile": completed.profile.name,
         "passed": all(criteria.values()),
         "criteria": criteria,
+        "acceptance_gate": gate.summary,
         "solver_summary": completed.summary,
         "refinement_summary": refinement.summary,
         "balance_summary": assessed_balance.summary,
@@ -235,6 +253,7 @@ def write_bundle(
             "attempts": len(completed.attempt_rows),
             "solver_diagnostics": len(completed.diagnostic_rows),
             "events": len(completed.event_rows),
+            "acceptance_criteria": len(gate.rows),
             "force_moment_balance": len(assessed_balance.rows),
             "interface_rows": len(contact_rows),
             "facet_pairs": len(pairs),
@@ -257,12 +276,20 @@ def run(
     _solver_runner: SolverRunner = run_solver,
     _refinement_runner: RefinementRunner = run_refinement,
 ) -> dict[str, object]:
-    """Execute production, refinement, balance, pressure, and artifact export."""
+    """Execute the complete benchmark and enforce every acceptance criterion."""
 
     completed = _solver_runner(profile)
     refinement = _refinement_runner(profile)
     model = build_rotating_blocks_model(completed.profile.model_profile)
-    return write_bundle(output, model, completed, refinement)
+    summary = write_bundle(output, model, completed, refinement)
+    if not summary["passed"]:
+        gate_summary = summary["acceptance_gate"]
+        assert isinstance(gate_summary, Mapping)
+        if not gate_summary["passed"]:
+            raise RuntimeError(acceptance_failure_message(gate_summary))
+        failed = [name for name, passed in summary["criteria"].items() if not passed]
+        raise RuntimeError("rotating-blocks bundle failed: " + ", ".join(failed))
+    return summary
 
 
 def main() -> None:
