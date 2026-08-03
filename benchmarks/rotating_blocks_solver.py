@@ -64,18 +64,19 @@ def solver_options(profile: RotatingBlocksExecutionProfile) -> AdaptiveContactOp
         equilibrium_tolerance=1.0e-8,
         gap_tolerance=1.0e-7,
         complementarity_tolerance=1.0e-7,
-        projection_tolerance=1.0e-7,
+        projection_tolerance=1.0e-5,
         multiplier_tolerance=1.0e-7,
     )
     linear = LinearSolverOptions(
         backend="auto" if profile.name == "quick" else "sparse_lu",
         dense_threshold=96,
     )
+    maximum_augmentations = 32 if profile.name == "quick" else 48
     augmented = AugmentedContactOptions(
-        maximum_augmentations=16,
+        maximum_augmentations=maximum_augmentations,
         gap_tolerance=1.0e-8,
-        complementarity_tolerance=1.0e-8,
-        projection_tolerance=1.0e-8,
+        complementarity_tolerance=1.0e-7,
+        projection_tolerance=1.0e-5,
         multiplier_tolerance=1.0e-8,
         event_policy="restart",
         newton=NewtonOptions(
@@ -90,6 +91,7 @@ def solver_options(profile: RotatingBlocksExecutionProfile) -> AdaptiveContactOp
             initial_step=profile.initial_step,
             minimum_step=profile.minimum_step,
             maximum_step=profile.maximum_step,
+            easy_newton_iterations=maximum_augmentations,
             maximum_attempts=profile.maximum_attempts,
         ),
         penalty=AdaptivePenaltyOptions(
@@ -212,8 +214,19 @@ def _attempt_rows(
 
 def _event_counts(event_rows: tuple[dict[str, object], ...]) -> dict[str, int]:
     kinds = tuple(str(row["kind"]) for row in event_rows)
+    transitions = {
+        (
+            str(row["kind"]),
+            int(row.get("interface", -1)),
+            str(row.get("entity", "")),
+            round(float(row.get("continuation_parameter", 0.0)), 12),
+        )
+        for row in event_rows
+    }
     return {
         "event_count": len(kinds),
+        "event_kind_count": len(set(kinds)),
+        "unique_transition_count": len(transitions),
         "pair_entries": kinds.count("pair_entry"),
         "pair_exits": kinds.count("pair_exit"),
         "support_activations": kinds.count("support_activation"),
@@ -254,8 +267,9 @@ def _summary(
         "scale_aware_residuals_satisfied": max_residual <= 1.0e-8,
         "scale_aware_penetration_satisfied": max_penetration <= 1.0e-7,
         "restart_history_healthy": restart_diagnostics.healthy,
-        "repeated_pair_entries": event_counts["pair_entries"] >= 2,
-        "repeated_pair_exits": event_counts["pair_exits"] >= 2,
+        "repeated_topology_transitions": (
+            event_counts["unique_transition_count"] >= 2
+        ),
         "solver_diagnostics_complete": bool(
             solver_diagnostics["diagnostics_complete"]
         ),

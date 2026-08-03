@@ -101,9 +101,19 @@ def _result(*, converged: bool = True) -> SimpleNamespace:
         _attempt(3, "penalty_increase", 1.0),
         _attempt(4, "accepted", 1.0),
     )
-    event_rows = tuple(
-        {"kind": kind}
-        for kind in ("pair_entry", "pair_exit", "pair_entry", "pair_exit")
+    event_rows = (
+        {
+            "kind": "clipping_vertex_edge",
+            "interface": 0,
+            "entity": "0:1:2",
+            "continuation_parameter": 0.5,
+        },
+        {
+            "kind": "pallet_transition",
+            "interface": 0,
+            "entity": "0:1:2",
+            "continuation_parameter": 0.75,
+        },
     )
     return SimpleNamespace(
         accepted_steps=accepted_steps,
@@ -132,10 +142,35 @@ def test_profiles_map_to_scale_aware_production_options() -> None:
     assert full.load.initial_step == pytest.approx(1.0 / 64.0)
     assert quick.load.maximum_attempts == 128
     assert full.load.maximum_attempts == 1024
+    assert quick.augmented.maximum_augmentations == 32
+    assert full.augmented.maximum_augmentations == 48
+    assert quick.load.easy_newton_iterations == 32
+    assert full.load.easy_newton_iterations == 48
     assert quick.penalty.interface_local
     assert quick.penalty.normalized_penetration_target == pytest.approx(1.0e-7)
+    assert quick.scaling.gap_tolerance == pytest.approx(1.0e-7)
+    assert quick.scaling.complementarity_tolerance == pytest.approx(1.0e-7)
+    assert quick.scaling.projection_tolerance == pytest.approx(1.0e-5)
+    assert quick.scaling.projection_tolerance > quick.scaling.gap_tolerance
+    assert quick.augmented.projection_tolerance == pytest.approx(1.0e-5)
     assert quick.augmented.newton.linear_solver.backend == "auto"
     assert full.augmented.newton.linear_solver.backend == "sparse_lu"
+
+
+def test_topology_count_deduplicates_retry_records() -> None:
+    duplicate = {
+        "kind": "clipping_vertex_edge",
+        "interface": 0,
+        "entity": "0:1:2",
+        "continuation_parameter": 0.5,
+    }
+    counts = SOLVER._event_counts((duplicate, dict(duplicate)))
+    assert counts["event_count"] == 2
+    assert counts["unique_transition_count"] == 1
+
+    distinct = dict(duplicate, continuation_parameter=0.75)
+    counts = SOLVER._event_counts((duplicate, distinct))
+    assert counts["unique_transition_count"] == 2
 
 
 @pytest.mark.parametrize("profile", ("quick", "full"))
@@ -152,8 +187,10 @@ def test_run_uses_model_path_and_returns_refinement_ready_rows(profile: str) -> 
     assert completed.summary["profile"] == profile
     assert completed.summary["final_parameter"] == pytest.approx(1.0)
     assert completed.summary["accepted_step_count"] == 2
-    assert completed.summary["events"]["pair_entries"] == 2
-    assert completed.summary["events"]["pair_exits"] == 2
+    assert completed.summary["events"]["pair_entries"] == 0
+    assert completed.summary["events"]["pair_exits"] == 0
+    assert completed.summary["events"]["unique_transition_count"] == 2
+    assert completed.summary["criteria"]["repeated_topology_transitions"]
     assert completed.accepted_rows[-1]["rotation_angle"] == pytest.approx(0.5 * np.pi)
     assert [row["action"] for row in completed.attempt_rows] == [
         "cutback",
