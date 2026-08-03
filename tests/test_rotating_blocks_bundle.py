@@ -30,6 +30,7 @@ PROFILES = _load_module("rotating_blocks_profiles", "rotating_blocks_profiles.py
 _load_module("rotating_blocks_diagnostics", "rotating_blocks_diagnostics.py")
 _load_module("rotating_blocks_solver", "rotating_blocks_solver.py")
 _load_module("svg_plots", "svg_plots.py")
+BALANCE = _load_module("rotating_blocks_balance", "rotating_blocks_balance.py")
 _load_module("rotating_blocks_refinement", "rotating_blocks_refinement.py")
 BUNDLE = _load_module("rotating_blocks_bundle", "rotating_blocks_bundle.py")
 
@@ -215,6 +216,23 @@ def _fixtures():
     return model, completed, refinement
 
 
+def _balance(completed) -> object:
+    rows = tuple(
+        {
+            "accepted_step": index,
+            "parameter": float(row["parameter"]),
+            "normalized_global_force_error": 0.0,
+            "normalized_contact_force_error": 0.0,
+            "normalized_global_moment_origin_error": 0.0,
+            "normalized_global_moment_pivot_error": 0.0,
+            "normalized_contact_moment_origin_error": 0.0,
+            "normalized_contact_moment_pivot_error": 0.0,
+        }
+        for index, row in enumerate(completed.accepted_rows, start=1)
+    )
+    return BALANCE.RotatingBlocksBalance(rows, BALANCE.summarize_balance(rows))
+
+
 def test_checkpoint_selection_covers_required_physical_regimes() -> None:
     model, completed, _ = _fixtures()
 
@@ -237,15 +255,26 @@ def test_checkpoint_selection_covers_required_physical_regimes() -> None:
 def test_bundle_writes_valid_manifest_tables_vtk_and_plots(tmp_path: Path) -> None:
     model, completed, refinement = _fixtures()
 
-    summary = BUNDLE.write_bundle(tmp_path, model, completed, refinement)
+    summary = BUNDLE.write_bundle(
+        tmp_path,
+        model,
+        completed,
+        refinement,
+        balance=_balance(completed),
+    )
 
     assert summary["passed"]
+    assert summary["balance_summary"]["passed"]
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     validate_benchmark_manifest(manifest, root=tmp_path)
     paths = {record["path"] for record in manifest["artifacts"]}
     assert "tables/interface-rows.csv" in paths
     assert "tables/refinement-fields.csv" in paths
+    assert "tables/force-moment-balance.csv" in paths
     assert "plots/pressure-redistribution.svg" in paths
+    assert "plots/force-balance.svg" in paths
+    assert "plots/moment-balance.svg" in paths
+    assert "plots/balance-worst-states.svg" in paths
     assert "checkpoints/03-final/volume.vtu" in paths
     assert "checkpoints/03-final/projected-overlap.vtp" in paths
 
