@@ -31,6 +31,13 @@ from rotating_blocks_model import RotatingBlocksModel, build_rotating_blocks_mod
 from rotating_blocks_pressure import PressureArtifacts, write_pressure_artifacts
 from rotating_blocks_refinement import RotatingBlocksRefinement
 from rotating_blocks_refinement import run as run_refinement
+from rotating_blocks_retention import (
+    RotatingBlocksRetention,
+    audit_contact_retention,
+    retention_thresholds,
+    write_retention_artifacts,
+)
+from rotating_blocks_retention_gate import include_retention_in_gate
 from rotating_blocks_solver import RotatingBlocksSolverRun, solver_options
 from rotating_blocks_solver import run as run_solver
 
@@ -133,6 +140,7 @@ def write_bundle(
     refinement: RotatingBlocksRefinement,
     *,
     balance: RotatingBlocksBalance | None = None,
+    retention: RotatingBlocksRetention | None = None,
     determinism: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Write and manifest-validate one complete result directory."""
@@ -140,6 +148,9 @@ def write_bundle(
     output = Path(output)
     assessed_balance = (
         audit_accepted_states(model, completed) if balance is None else balance
+    )
+    assessed_retention = (
+        audit_contact_retention(completed) if retention is None else retention
     )
     writer = BenchmarkArtifactWriter(
         output,
@@ -151,6 +162,7 @@ def write_bundle(
             "refinement_steps": refinement.summary["requested_steps"],
             "balance_force_tolerance": assessed_balance.summary["force_tolerance"],
             "balance_moment_tolerance": assessed_balance.summary["moment_tolerance"],
+            "retention_thresholds": retention_thresholds(completed.profile),
             "acceptance_thresholds": acceptance_thresholds(completed.profile),
         },
         repo_root=Path(__file__).resolve().parents[1],
@@ -199,6 +211,9 @@ def write_bundle(
         refinement,
     )
     required.extend(pressure.required)
+    required.extend(
+        write_retention_artifacts(writer, output, assessed_retention)
+    )
     gate = evaluate_acceptance_gate(
         completed,
         refinement,
@@ -206,8 +221,12 @@ def write_bundle(
         pressure.summary,
         determinism=determinism,
     )
+    gate = include_retention_in_gate(gate, assessed_retention)
     required.extend(write_gate_artifacts(writer, gate))
     names = tuple(checkpoint.name for checkpoint in checkpoints)
+    rotation_count = sum(
+        int(row.get("phase_index", -1)) == 1 for row in completed.accepted_rows
+    )
     criteria = {
         "acceptance_gate_passed": gate.passed,
         "solver_passed": completed.passed,
@@ -218,6 +237,9 @@ def write_bundle(
         "pressure_redistribution_passed": bool(pressure.summary["passed"]),
         "pressure_evidence_complete": pressure.row_counts["pressure_aggregates"]
         == len(completed.accepted_rows),
+        "contact_retention_passed": assessed_retention.passed,
+        "contact_retention_evidence_complete": len(assessed_retention.rows)
+        == rotation_count,
         "checkpoint_regimes_complete": names
         == ("pre-contact", "compressed", "mid-rotation", "final"),
         "final_checkpoint_reached": bool(
@@ -247,6 +269,7 @@ def write_bundle(
         "refinement_summary": refinement.summary,
         "balance_summary": assessed_balance.summary,
         "pressure_summary": pressure.summary,
+        "retention_summary": assessed_retention.summary,
         "checkpoints": checkpoint_files,
         "table_row_counts": {
             "accepted_steps": len(completed.accepted_rows),
@@ -255,6 +278,7 @@ def write_bundle(
             "events": len(completed.event_rows),
             "acceptance_criteria": len(gate.rows),
             "force_moment_balance": len(assessed_balance.rows),
+            "contact_retention": len(assessed_retention.rows),
             "interface_rows": len(contact_rows),
             "facet_pairs": len(pairs),
             "overlap_regions": len(overlap_rows),
