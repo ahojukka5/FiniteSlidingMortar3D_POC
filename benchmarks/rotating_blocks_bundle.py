@@ -22,6 +22,7 @@ from rotating_blocks_bundle_data import (
 )
 from rotating_blocks_bundle_output import write_checkpoint, write_plots
 from rotating_blocks_model import RotatingBlocksModel, build_rotating_blocks_model
+from rotating_blocks_pressure import PressureArtifacts, write_pressure_artifacts
 from rotating_blocks_refinement import RotatingBlocksRefinement
 from rotating_blocks_refinement import run as run_refinement
 from rotating_blocks_solver import RotatingBlocksSolverRun, solver_options
@@ -182,12 +183,23 @@ def write_bundle(
         write_plots(writer, output, completed, checkpoints, final_overlays)
     )
     required.extend(write_balance_plots(writer, output, assessed_balance))
+    pressure: PressureArtifacts = write_pressure_artifacts(
+        writer,
+        output,
+        model,
+        completed,
+        refinement,
+    )
+    required.extend(pressure.required)
     names = tuple(checkpoint.name for checkpoint in checkpoints)
     criteria = {
         "solver_passed": completed.passed,
         "refinement_passed": refinement.passed,
         "force_moment_balance_passed": assessed_balance.passed,
         "balance_evidence_complete": len(assessed_balance.rows)
+        == len(completed.accepted_rows),
+        "pressure_redistribution_passed": bool(pressure.summary["passed"]),
+        "pressure_evidence_complete": pressure.row_counts["pressure_aggregates"]
         == len(completed.accepted_rows),
         "checkpoint_regimes_complete": names
         == ("pre-contact", "compressed", "mid-rotation", "final"),
@@ -216,6 +228,7 @@ def write_bundle(
         "solver_summary": completed.summary,
         "refinement_summary": refinement.summary,
         "balance_summary": assessed_balance.summary,
+        "pressure_summary": pressure.summary,
         "checkpoints": checkpoint_files,
         "table_row_counts": {
             "accepted_steps": len(completed.accepted_rows),
@@ -228,6 +241,7 @@ def write_bundle(
             "overlap_regions": len(overlap_rows),
             "refinement_fields": len(refinement.comparison_rows),
             "refinement_events": len(refinement.event_rows),
+            **pressure.row_counts,
         },
     }
     writer.write_json("summary.json", summary, schema=SCHEMA)
@@ -243,7 +257,7 @@ def run(
     _solver_runner: SolverRunner = run_solver,
     _refinement_runner: RefinementRunner = run_refinement,
 ) -> dict[str, object]:
-    """Execute production, refinement, balance, and complete artifact export."""
+    """Execute production, refinement, balance, pressure, and artifact export."""
 
     completed = _solver_runner(profile)
     refinement = _refinement_runner(profile)
