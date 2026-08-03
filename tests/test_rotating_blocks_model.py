@@ -33,6 +33,14 @@ def _controlled_dofs(nodes: np.ndarray) -> np.ndarray:
     )
 
 
+def _assert_distinct_grid_lines(slave: np.ndarray, master: np.ndarray) -> None:
+    for axis in (0, 1):
+        slave_values = np.unique(slave[:, axis])
+        master_values = np.unique(master[:, axis])
+        distances = np.abs(slave_values[:, None] - master_values[None, :])
+        assert float(np.min(distances)) > 1.0e-12
+
+
 def test_quick_model_is_deterministic_and_oriented() -> None:
     first = build_rotating_blocks_model("quick")
     second = build_rotating_blocks_model("quick")
@@ -56,6 +64,7 @@ def test_quick_model_is_deterministic_and_oriented() -> None:
     )
     assert np.all(determinants > 0.0)
     assert first.minimum_reference_determinant == pytest.approx(np.min(determinants))
+    assert len(first.lower_elements) == 24
 
 
 def test_contact_surfaces_are_exact_nonmatching_quad_mappings() -> None:
@@ -74,10 +83,44 @@ def test_contact_surfaces_are_exact_nonmatching_quad_mappings() -> None:
     assert all(len(facet) == 4 for facet in interface.pair.slave.facets)
     assert all(len(facet) == 4 for facet in interface.pair.master.facets)
     assert interface.pair.slave.node_count == 12
-    assert interface.pair.master.node_count == 25
+    assert interface.pair.master.node_count == 9
     assert len(interface.pair.slave.facets) == 6
-    assert len(interface.pair.master.facets) == 16
+    assert len(interface.pair.master.facets) == 4
     assert interface.pair.search_distance > model.initial_separation > 0.0
+
+
+def test_contact_grid_lines_are_smooth_at_path_endpoints() -> None:
+    model = build_rotating_blocks_model("quick")
+    mesh = model.problem.mesh
+    master = mesh.reference_nodes[model.master_nodes]
+    slave = mesh.reference_nodes[model.slave_nodes]
+    _assert_distinct_grid_lines(slave, master)
+
+    final = model.path.evaluate(model.problem, model.path.end_parameter)
+    displacement = np.zeros(3 * mesh.node_count)
+    displacement[final.prescribed_dofs] = final.prescribed_values
+    current = mesh.reference_nodes + displacement.reshape((-1, 3))
+    _assert_distinct_grid_lines(current[model.slave_nodes], master)
+
+
+def test_contact_onset_lies_inside_nominal_continuation_steps() -> None:
+    model = build_rotating_blocks_model("quick")
+    geometry = model.geometry
+    onset = geometry.contact_onset_parameter
+
+    assert onset == pytest.approx(0.13125)
+    assert 0.0 < onset < geometry.compression_end
+    for requested_steps in (16, 64):
+        step_coordinate = onset * requested_steps
+        assert not np.isclose(step_coordinate, round(step_coordinate), atol=1.0e-12)
+
+    epsilon = 1.0e-8
+    before = model.path.evaluate(model.problem, onset - epsilon)
+    after = model.path.evaluate(model.problem, onset + epsilon)
+    gap_before = model.initial_separation + before.value("translation_z")
+    gap_after = model.initial_separation + after.value("translation_z")
+    assert gap_before > 0.0
+    assert gap_after < 0.0
 
 
 def test_upper_block_is_completely_rigidly_controlled() -> None:
