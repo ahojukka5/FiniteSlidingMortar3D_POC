@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -8,7 +10,6 @@ import numpy as np
 import pytest
 
 from contact3d import MortarContactInterface, evaluate_coupled_equilibrium
-from examples.contact_patch import run as run_contact_patch
 
 BENCHMARK_PATH = (
     Path(__file__).resolve().parents[1]
@@ -113,8 +114,25 @@ def test_production_coupled_tangent_matches_centered_difference(parameter: float
 
 
 def test_contact_patch_example(tmp_path: Path) -> None:
-    summary = run_contact_patch(tmp_path)
+    repository_root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "examples.contact_patch",
+            "--output",
+            str(tmp_path),
+        ],
+        cwd=repository_root,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=600.0,
+    )
+    summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
+    printed_metrics = json.loads(completed.stdout)
     metrics = summary["metrics"]
+    assert printed_metrics == metrics
     assert summary["passed"]
     assert metrics["converged"]
     assert metrics["final_parameter"] == pytest.approx(1.0)
