@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from contact3d import MortarContactInterface, evaluate_coupled_equilibrium
+from examples.contact_patch import run as run_contact_patch
 
 BENCHMARK_PATH = (
     Path(__file__).resolve().parents[1]
@@ -111,28 +112,22 @@ def test_production_coupled_tangent_matches_centered_difference(parameter: float
     assert relative < 2.0e-6
 
 
-def test_full_contact_onset_benchmark(tmp_path: Path) -> None:
-    summary = MODULE.run(tmp_path)
+def test_contact_patch_example(tmp_path: Path) -> None:
+    summary = run_contact_patch(tmp_path)
     metrics = summary["metrics"]
+    assert summary["passed"]
     assert metrics["converged"]
+    assert metrics["final_parameter"] == pytest.approx(1.0)
     assert 0.0 < metrics["contact_onset_parameter"] < 1.0
     assert metrics["final_active_rows"] > 0
     assert metrics["final_facet_pairs"] == 2
     assert metrics["final_supported_rows"] == 4
-    assert metrics["maximum_directional_tangent_error"] < 2.0e-6
     assert metrics["maximum_partition_error"] < 1.0e-10
     assert metrics["minimum_element_jacobian"] > 0.0
+    assert metrics["final_normalized_residual"] < 1.0e-8
     assert metrics["final_normalized_penetration"] < 2.0e-7
-    for name in (
-        "summary.json",
-        "accepted-steps.csv",
-        "interface-rows.csv",
-        "attempt-history.csv",
-        "tangent-checks.csv",
-        "deformation.svg",
+    assert {path.name for path in tmp_path.iterdir()} == {
+        "final.vtu",
         "pressure.svg",
-        "overlap.svg",
-        "reaction.svg",
-        "residual.svg",
-    ):
-        assert (tmp_path / name).is_file()
+        "summary.json",
+    }
