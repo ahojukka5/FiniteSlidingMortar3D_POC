@@ -10,9 +10,9 @@ set under its own `results/` directory.
 uv run python -m examples.contact_patch
 ```
 
-The smallest completed v0.1 example solves two small finite-strain TET4 bodies
-with one warped `QUAD4` mortar surface against two nonmatching `TRI3` facets.
-See [contact_patch](contact_patch/) for the model and outputs.
+The smallest v0.1 example solves two small finite-strain TET4 bodies with one
+warped `QUAD4` mortar surface against two nonmatching `TRI3` facets. See
+[contact_patch](contact_patch/) for the model and outputs.
 
 ## 2. Nonmatching sandwiched beam
 
@@ -25,9 +25,16 @@ through a nonmatching `QUAD4`/`QUAD4` mortar interface. It also solves one
 conforming monolithic reference response. See
 [sandwiched_beam](sandwiched_beam/) for the model, checks, and limitations.
 
-## Planned v0.1 example
+## 3. Rotating blocks
 
-- [rotating blocks](https://github.com/ahojukka5/FiniteSlidingMortar3D_POC/issues/24)
+```bash
+uv run python -m examples.rotating_blocks
+```
+
+The large-sliding example compresses, translates, and rotates a smaller TET4
+block over a larger block while the nonmatching mortar overlap topology
+changes. See [rotating_blocks](rotating_blocks/) for the prescribed path,
+outputs, and limitations.
 
 The large benchmark campaigns remain available for internal verification, but
 they are not the user-facing workflow and are not prerequisites for running an
