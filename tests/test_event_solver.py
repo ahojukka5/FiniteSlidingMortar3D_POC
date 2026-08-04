@@ -89,6 +89,34 @@ def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
     assert all(row.linear_solve.materialized_dense for row in result.history)
 
 
+def test_event_restart_clears_tangent_only_singularity(monkeypatch) -> None:
+    import contact3d.event_geometry as geometry_module
+    import contact3d.event_newton as newton_module
+
+    def evaluate(problem, displacement, states, *, assemble_tangent=True, **kwargs):
+        del problem, states, kwargs
+        value = float(np.asarray(displacement)[0])
+        if assemble_tangent and 0.52 < value <= 0.54:
+            raise ClippingTopologyError("synthetic tangent-only coincidence")
+        return fake_evaluation(value, tangent=assemble_tangent)
+
+    monkeypatch.setattr(geometry_module, "evaluate_coupled_equilibrium", evaluate)
+    monkeypatch.setattr(newton_module, "evaluate_coupled_equilibrium", evaluate)
+    result = solve_event_aware_coupled_equilibrium(
+        Problem(),
+        (object(),),
+        np.zeros(3),
+    )
+
+    assert result.converged
+    assert result.contact_event_restarts == 1
+    event_fraction = result.events[0].selected_fraction
+    restart = next(row for row in result.history if row.contact_branch_changed)
+    assert event_fraction == pytest.approx(0.52, abs=2.0e-10)
+    assert restart.accepted_step > 0.54
+    assert result.displacement[0] == pytest.approx(1.0)
+
+
 def test_production_geometry_signature_records_polygon_and_pallet_counts(monkeypatch) -> None:
     import contact3d.event_geometry as module
 

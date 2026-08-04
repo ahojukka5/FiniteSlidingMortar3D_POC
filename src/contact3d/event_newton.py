@@ -37,6 +37,8 @@ from .topology_events import (
     TopologyObservation,
 )
 
+_RESTART_CLEARANCE_WEIGHTS = tuple(2.0**-exponent for exponent in range(24, -1, -1))
+
 
 def _result(
     displacement: FloatArray,
@@ -62,6 +64,56 @@ def _result(
         tuple(states),
         tuple(transports),
     )
+
+
+def _restart_evaluation_with_clearance(
+    problem: CoupledEquilibriumProblem,
+    states: tuple[AugmentedLagrangeState, ...],
+    displacement: FloatArray,
+    step: FloatArray,
+    localized: ContactTopologyEventBatch,
+    trial_fraction: float,
+    *,
+    load_factor: float,
+    tolerance: float,
+) -> tuple[float, CoupledEquilibriumEvaluation] | None:
+    """Return the nearest tangent-capable point inside the selected branch."""
+
+    selected = localized.selected
+    signatures = selected.signatures
+    start = float(selected.fraction)
+    stop = float(trial_fraction)
+    if signatures is None or stop <= start:
+        return None
+    span = stop - start
+    for weight in _RESTART_CLEARANCE_WEIGHTS:
+        fraction = start + weight * span
+        try:
+            observation = _observation(
+                problem,
+                states,
+                displacement,
+                step,
+                fraction,
+                load_factor=load_factor,
+                tolerance=tolerance,
+            )
+        except BulkGeometryError:
+            continue
+        if not observation.is_valid or observation.signatures != signatures:
+            continue
+        try:
+            evaluation = evaluate_coupled_equilibrium(
+                problem,
+                displacement + fraction * step,
+                states,
+                load_factor=load_factor,
+                tolerance=tolerance,
+            )
+        except (BulkGeometryError, *_RECOVERABLE_ERRORS):
+            continue
+        return fraction, evaluation
+    return None
 
 
 def solve_event_aware_coupled_equilibrium(
@@ -250,29 +302,47 @@ def solve_event_aware_coupled_equilibrium(
                 states,
                 transports,
             )
-        displacement = accepted.displacement.copy()
+        candidate_displacement = accepted.displacement.copy()
         if localized is not None:
             events.append(localized)
         try:
             evaluation = evaluate_coupled_equilibrium(
                 problem,
-                displacement,
+                candidate_displacement,
                 states,
                 load_factor=load_factor,
                 tolerance=tolerance,
             )
         except _RECOVERABLE_ERRORS:
-            return _result(
-                displacement,
-                load_factor,
-                False,
-                "contact_linearization_event",
-                accepted,
-                history,
-                events,
-                states,
-                transports,
+            recovered = (
+                None
+                if localized is None
+                else _restart_evaluation_with_clearance(
+                    problem,
+                    states,
+                    displacement,
+                    step,
+                    localized,
+                    alpha,
+                    load_factor=load_factor,
+                    tolerance=tolerance,
+                )
             )
+            if recovered is None:
+                return _result(
+                    candidate_displacement,
+                    load_factor,
+                    False,
+                    "contact_linearization_event",
+                    accepted,
+                    history,
+                    events,
+                    states,
+                    transports,
+                )
+            accepted_alpha, evaluation = recovered
+            candidate_displacement = evaluation.displacement.copy()
+        displacement = candidate_displacement
         history.append(
             CoupledNewtonIteration(
                 iteration=iteration + 1,
