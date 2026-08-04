@@ -1,0 +1,320 @@
+name: Warped patch evidence
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/warped-patch-evidence.yml
+      - benchmarks/warped_patch_*.py
+      - src/contact3d/**
+      - pyproject.toml
+      - uv.lock
+
+concurrency:
+  group: warped-patch-evidence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  case:
+    name: Case (${{ matrix.family }}, ${{ matrix.bias }}, ${{ matrix.level }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 24
+      matrix:
+        family:
+          - quad-quad
+          - tri-quad
+          - quad-tri
+          - tri-tri
+        bias:
+          - lower
+          - upper
+        level:
+          - coarse
+          - medium
+          - fine
+    env:
+      EVIDENCE_FAMILY: ${{ matrix.family }}
+      EVIDENCE_BIAS: ${{ matrix.bias }}
+      EVIDENCE_LEVEL: ${{ matrix.level }}
+      EVIDENCE_OUTPUT: results/warped-patch-cases/${{ matrix.family }}-${{ matrix.bias }}-${{ matrix.level }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Sync dependencies
+        run: uv sync --extra dev --python 3.12
+
+      - name: Run production case
+        run: |
+          rm -rf "$EVIDENCE_OUTPUT"
+          uv run python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, "benchmarks")
+          import warped_patch_convergence as campaign
+          from warped_patch_solver import (
+              ATTEMPT_SCHEMA,
+              CASE_SCHEMA,
+              solve_warped_patch_case,
+          )
+          from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+
+          family = os.environ["EVIDENCE_FAMILY"]
+          bias = os.environ["EVIDENCE_BIAS"]
+          level = os.environ["EVIDENCE_LEVEL"]
+          output = Path(os.environ["EVIDENCE_OUTPUT"])
+          case = solve_warped_patch_case(
+              level,
+              surface_family=family,
+              bias_side=bias,
+              publication=True,
+          )
+          artifacts = BenchmarkArtifactWriter(
+              output,
+              "warped-nonmatching-patch-case",
+              seed=23017,
+              solver_settings={
+                  "profile": "full",
+                  "surface_family": family,
+                  "bias_side": bias,
+                  "level": level,
+                  "publication": True,
+              },
+              repo_root=Path.cwd(),
+          )
+          artifacts.write_json("metrics.json", case.metrics, schema=CASE_SCHEMA)
+          required = ["metrics.json"]
+          required.extend(campaign._write_case_fields(artifacts, case))
+          if case.attempt_rows:
+              artifacts.write_csv(
+                  "attempts.csv",
+                  case.attempt_rows,
+                  schema=ATTEMPT_SCHEMA,
+              )
+          if case.event_rows:
+              artifacts.write_csv(
+                  "events.csv",
+                  case.event_rows,
+                  schema="contact3d-warped-patch-events/v1",
+              )
+          artifacts.finalize(required=required)
+          PY
+
+      - name: Publish case summary
+        if: always()
+        run: |
+          if [[ ! -f "$EVIDENCE_OUTPUT/metrics.json" ]]; then
+            exit 0
+          fi
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metrics = json.loads(
+              (Path(os.environ["EVIDENCE_OUTPUT"]) / "metrics.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          lines = [
+              f"## {metrics['case_id']}",
+              "",
+              f"- Converged: **{metrics['converged']}**",
+              f"- Reaction error: {metrics['reaction_relative_error']:.6e}",
+              f"- Pressure error: {metrics['pressure_relative_l2_error']:.6e}",
+              f"- Gap / h: {metrics['gap_over_h']:.6e}",
+              f"- Equilibrium residual: {metrics['normalized_equilibrium_residual']:.6e}",
+              f"- Elapsed solver time: {metrics['elapsed_seconds']:.2f} s",
+          ]
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as stream:
+              stream.write("\n".join(lines) + "\n")
+          PY
+
+      - name: Retain case evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warped-patch-case-${{ matrix.family }}-${{ matrix.bias }}-${{ matrix.level }}-${{ github.sha }}
+          path: ${{ env.EVIDENCE_OUTPUT }}
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate:
+    name: Verify complete 24-case evidence
+    needs: case
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Sync dependencies
+        run: uv sync --extra dev --python 3.12
+
+      - name: Download case bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: warped-patch-case-*-${{ github.sha }}
+          path: evidence
+
+      - name: Aggregate and verify complete matrix
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          from types import SimpleNamespace
+
+          sys.path.insert(0, "benchmarks")
+          import warped_patch_convergence as campaign
+          from contact3d.benchmark_artifacts import BenchmarkArtifactWriter
+
+          metrics = [
+              json.loads(path.read_text(encoding="utf-8"))
+              for path in sorted(Path("evidence").glob("*/metrics.json"))
+          ]
+          expected = {
+              (family, bias, level)
+              for family in ("quad-quad", "tri-quad", "quad-tri", "tri-tri")
+              for bias in ("lower", "upper")
+              for level in campaign.LEVELS
+          }
+          observed = {
+              (
+                  str(row["surface_family"]),
+                  str(row["bias_side"]),
+                  str(row["profile"]),
+              )
+              for row in metrics
+          }
+          if observed != expected:
+              missing = sorted(expected - observed)
+              extra = sorted(observed - expected)
+              raise SystemExit(f"incomplete matrix; missing={missing}, extra={extra}")
+
+          cases = tuple(SimpleNamespace(metrics=row) for row in metrics)
+          levels = [dict(row) for row in metrics]
+          rates = campaign._rate_rows(cases)
+          bias = campaign._bias_rows(cases)
+          gate = campaign._gate("full", levels, bias)
+          summary = {
+              "schema_version": campaign.SUMMARY_SCHEMA,
+              "profile": "full",
+              "case_count": len(cases),
+              "surface_families": ["quad-quad", "tri-quad", "quad-tri", "tri-tri"],
+              "levels": list(campaign.LEVELS),
+              "bias_sides": ["lower", "upper"],
+              "passed": bool(gate["passed"]),
+              "maximum_reaction_error": max(
+                  float(row["reaction_relative_error"]) for row in levels
+              ),
+              "maximum_pressure_error": max(
+                  float(row["pressure_relative_l2_error"]) for row in levels
+              ),
+              "maximum_gap_over_h": max(float(row["gap_over_h"]) for row in levels),
+              "maximum_reaction_bias": max(
+                  float(row["reaction_relative_difference"]) for row in bias
+              ),
+              "total_topology_events": sum(
+                  int(row["topology_events"]) for row in levels
+              ),
+              "gate": gate,
+          }
+          output = Path("combined")
+          artifacts = BenchmarkArtifactWriter(
+              output,
+              "warped-nonmatching-patch-convergence",
+              seed=23017,
+              solver_settings={
+                  "profile": "full",
+                  "levels": campaign.LEVELS,
+                  "surface_families": summary["surface_families"],
+                  "bias_sides": summary["bias_sides"],
+                  "publication": True,
+                  "execution": "distributed-case-matrix",
+              },
+              repo_root=Path.cwd(),
+          )
+          artifacts.write_json(
+              "summary.json",
+              summary,
+              schema=campaign.SUMMARY_SCHEMA,
+          )
+          artifacts.write_json("gate.json", gate, schema=campaign.GATE_SCHEMA)
+          artifacts.write_csv("levels.csv", levels, schema=campaign.LEVEL_SCHEMA)
+          artifacts.write_csv("rates.csv", rates, schema=campaign.RATE_SCHEMA)
+          artifacts.write_csv("bias.csv", bias, schema=campaign.BIAS_SCHEMA)
+          plots = campaign._write_convergence_plots(artifacts, cases)
+          required = [
+              "summary.json",
+              "gate.json",
+              "levels.csv",
+              "rates.csv",
+              "bias.csv",
+              *plots,
+          ]
+          artifacts.finalize(required=required)
+
+          lines = [
+              "## Complete warped nonmatching patch evidence",
+              "",
+              f"- Cases: {summary['case_count']}",
+              "- Surface families: 4",
+              "- Mortar-side choices per family: 2",
+              "- Refinement levels per bias: 3",
+              f"- Combined gate: **{'PASS' if gate['passed'] else 'FAIL'}**",
+              f"- Maximum reaction error: {summary['maximum_reaction_error']:.6e}",
+              f"- Maximum pressure error: {summary['maximum_pressure_error']:.6e}",
+              f"- Maximum gap / h: {summary['maximum_gap_over_h']:.6e}",
+              f"- Maximum reaction bias: {summary['maximum_reaction_bias']:.6e}",
+          ]
+          if gate["failed_criteria"]:
+              lines.extend(
+                  (
+                      "",
+                      "Failed criteria: "
+                      + ", ".join(f"`{item}`" for item in gate["failed_criteria"]),
+                  )
+              )
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as stream:
+              stream.write("\n".join(lines) + "\n")
+          if not gate["passed"]:
+              raise SystemExit(
+                  "warped patch evidence gate failed: "
+                  + ", ".join(str(item) for item in gate["failed_criteria"])
+              )
+          PY
+
+      - name: Retain combined evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warped-patch-full-complete-${{ github.sha }}
+          path: |
+            combined
+            evidence
+          if-no-files-found: error
+          retention-days: 30
