@@ -5,13 +5,11 @@ import numpy as np
 from contact3d.geometry import ContactSurface
 from contact3d.mortar import (
     ContactPair,
+    analytical_mortar_weight_jacobian,
     integrate_facet_pair,
     integrate_facet_pair_linearized,
-    numerical_contact_tangent,
-)
-from contact3d.moving import (
-    analytical_mortar_weight_jacobian,
     moving_mortar_contact_tangent,
+    numerical_contact_tangent,
     numerical_mortar_weight_jacobian,
 )
 

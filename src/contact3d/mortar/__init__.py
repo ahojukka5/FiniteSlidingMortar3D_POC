@@ -6,6 +6,12 @@ from .model import (
     GlobalMortarWeights,
     LocalMortarWeights,
 )
+from .moving import (
+    MortarWeightJacobian,
+    analytical_mortar_weight_jacobian,
+    moving_mortar_contact_tangent,
+    numerical_mortar_weight_jacobian,
+)
 from .operators import (
     LocalMortarWeightLinearization,
     assemble_mortar_weights,
@@ -21,11 +27,15 @@ __all__ = [
     "GlobalMortarWeights",
     "LocalMortarWeightLinearization",
     "LocalMortarWeights",
+    "MortarWeightJacobian",
+    "analytical_mortar_weight_jacobian",
     "assemble_mortar_weights",
     "build_facet_overlap",
     "evaluate_contact",
     "fixed_mortar_contact_tangent",
     "integrate_facet_pair",
     "integrate_facet_pair_linearized",
+    "moving_mortar_contact_tangent",
     "numerical_contact_tangent",
+    "numerical_mortar_weight_jacobian",
 ]
