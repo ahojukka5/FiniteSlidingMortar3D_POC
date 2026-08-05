@@ -1,4 +1,4 @@
-"""Core data structures for facet overlap and mortar integration."""
+"""Core data structures for pure facet geometry."""
 
 from __future__ import annotations
 
@@ -80,18 +80,3 @@ class FacetOverlap:
     @property
     def area(self) -> float:
         return float(sum(pallet.area for pallet in self.pallets))
-
-
-@dataclass(frozen=True, slots=True)
-class LocalMortarWeights:
-    """Local standard-mortar matrices for one overlapping facet pair."""
-
-    d: FloatArray
-    m: FloatArray
-    overlap: FacetOverlap
-
-    @property
-    def consistency_error(self) -> float:
-        """Maximum violation of the row-wise partition-of-unity identity."""
-
-        return float(np.max(np.abs(np.sum(self.d, axis=1) - np.sum(self.m, axis=1))))

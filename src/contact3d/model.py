@@ -1,6 +1,6 @@
-"""Compatibility exports for geometry and local mortar records.
+"""Temporary flat-path exports for geometry and local mortar records.
 
-New code should import geometry records from :mod:`contact3d.geometry`.
+This module is migration scaffolding only and is removed by issue #136.
 """
 
 from .geometry.model import (
@@ -8,12 +8,12 @@ from .geometry.model import (
     FacetOverlap,
     FloatArray,
     IntArray,
-    LocalMortarWeights,
     MortarPallet,
     ProjectedPointsJacobian,
     ProjectionPlane,
     ProjectionPlaneJacobian,
 )
+from .mortar.model import LocalMortarWeights
 
 __all__ = [
     "FacetKind",

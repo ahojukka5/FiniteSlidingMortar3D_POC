@@ -3,14 +3,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from contact3d import (
+from contact3d.geometry import ContactSurface, discover_facet_pairs_brute_force
+from contact3d.mortar import (
     ContactPair,
-    ContactSurface,
     assemble_mortar_weights,
     evaluate_contact,
     numerical_contact_tangent,
 )
-from contact3d.surface import discover_facet_pairs_brute_force
 
 
 def _unit_quad(z: float = 0.0) -> np.ndarray:
