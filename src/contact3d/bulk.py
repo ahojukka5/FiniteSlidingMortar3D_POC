@@ -35,18 +35,6 @@ from .adaptive import (
     with_contact_penalties,
     with_coupled_boundary_data,
 )
-from .bulk_material import (
-    BulkGeometryError,
-    NeoHookeanMaterial,
-    NeoHookeanResponse,
-    evaluate_neo_hookean,
-)
-from .bulk_oracle import (
-    numerical_neo_hookean_tangent,
-    numerical_tet4_mesh_tangent,
-    numerical_tet4_tangent,
-)
-from .bulk_sparse import Tet4SparseEvaluation, Tet4Sparsity, assemble_tet4_sparse
 from .coupled import (
     AugmentationIteration,
     AugmentedContactOptions,
@@ -87,14 +75,25 @@ from .linear_solver import (
     solve_linear_system,
     solve_reduced_system,
 )
-from .sparse import CSRMatrix, SparseAccumulator
-from .tet4 import (
+from .mechanics import (
+    BulkGeometryError,
+    CSRMatrix,
+    NeoHookeanMaterial,
+    NeoHookeanResponse,
+    SparseAccumulator,
     Tet4Evaluation,
     Tet4Mesh,
     Tet4MeshEvaluation,
     Tet4Reference,
+    Tet4SparseEvaluation,
+    Tet4Sparsity,
+    assemble_tet4_sparse,
+    evaluate_neo_hookean,
     evaluate_tet4,
     evaluate_tet4_mesh,
+    numerical_neo_hookean_tangent,
+    numerical_tet4_mesh_tangent,
+    numerical_tet4_tangent,
     tet4_deformation_gradient,
 )
 
