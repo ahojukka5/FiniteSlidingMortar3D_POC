@@ -25,3 +25,11 @@ def test_equilibrium_consumes_mechanics_package_boundary() -> None:
     assert not imports.intersection(
         {"bulk_material", "bulk_sparse", "model", "sparse", "tet4"}
     )
+
+
+def test_linear_solver_consumes_mechanics_storage_boundary() -> None:
+    imports = imported_modules(SOURCE_ROOT / "linear_solver.py")
+
+    assert "mechanics" in imports
+    assert "mechanics.model" in imports
+    assert not imports.intersection({"model", "sparse"})

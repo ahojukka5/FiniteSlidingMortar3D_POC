@@ -9,8 +9,8 @@ from typing import Literal, Protocol, runtime_checkable
 
 import numpy as np
 
-from .model import FloatArray, IntArray
-from .sparse import CSRMatrix
+from .mechanics import CSRMatrix
+from .mechanics.model import FloatArray, IntArray
 
 LinearBackend = Literal["auto", "dense", "sparse_lu", "gmres", "bicgstab"]
 PreconditionerKind = Literal["none", "jacobi", "ilu"]
