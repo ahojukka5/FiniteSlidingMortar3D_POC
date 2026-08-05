@@ -1,18 +1,20 @@
-"""Temporary re-export of projected normal-contact enforcement."""
+"""Projected augmented-Lagrange normal-contact enforcement."""
 
-from .mortar.enforcement import (
+from .evaluation import (
     AugmentedLagrangeEvaluation,
-    AugmentedLagrangeState,
     AugmentedLagrangeUpdate,
-    KKTDiagnostics,
     augment_multipliers,
-    augmented_lagrange_contact_tangent,
-    augmented_pressure_projection,
     evaluate_augmented_lagrange,
+)
+from .oracle import numerical_augmented_lagrange_tangent
+from .state import (
+    AugmentedLagrangeState,
+    KKTDiagnostics,
+    augmented_pressure_projection,
     kkt_diagnostics,
-    numerical_augmented_lagrange_tangent,
     supported_rows,
 )
+from .tangent import augmented_lagrange_contact_tangent
 
 __all__ = [
     "AugmentedLagrangeEvaluation",
