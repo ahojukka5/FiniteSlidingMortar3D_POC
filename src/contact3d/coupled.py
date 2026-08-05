@@ -6,17 +6,22 @@ from typing import Any, Literal, Protocol, runtime_checkable
 
 import numpy as np
 
-from .bulk_material import BulkGeometryError, NeoHookeanMaterial
-from .bulk_sparse import Tet4SparseEvaluation, Tet4Sparsity, assemble_tet4_sparse
 from .clipping import ClippingTopologyError
 from .enforcement_state import AugmentedLagrangeState, KKTDiagnostics
 from .equilibrium import DeadLoad, DirichletConstraints, NewtonOptions
 from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
-from .model import FloatArray, IntArray
+from .mechanics import (
+    BulkGeometryError,
+    CSRMatrix,
+    NeoHookeanMaterial,
+    Tet4Mesh,
+    Tet4SparseEvaluation,
+    Tet4Sparsity,
+    assemble_tet4_sparse,
+)
+from .mechanics.model import FloatArray, IntArray
 from .pallets import PalletTopologyError
 from .parametric import InverseMapTopologyError
-from .sparse import CSRMatrix
-from .tet4 import Tet4Mesh
 
 
 @dataclass(frozen=True, slots=True)
