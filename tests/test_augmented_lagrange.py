@@ -3,10 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from contact3d import (
+from contact3d.geometry import ContactSurface
+from contact3d.mortar import ContactPair
+from contact3d.mortar.enforcement import (
     AugmentedLagrangeState,
-    ContactPair,
-    ContactSurface,
     augment_multipliers,
     augmented_lagrange_contact_tangent,
     augmented_pressure_projection,
