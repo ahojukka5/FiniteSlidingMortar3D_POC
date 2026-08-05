@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from contact3d.bulk import (
+from contact3d.mechanics import (
     BulkGeometryError,
     NeoHookeanMaterial,
     Tet4Mesh,
@@ -11,6 +11,8 @@ from contact3d.bulk import (
     evaluate_neo_hookean,
     evaluate_tet4,
     evaluate_tet4_mesh,
+)
+from contact3d.mechanics.oracle import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
     numerical_tet4_tangent,

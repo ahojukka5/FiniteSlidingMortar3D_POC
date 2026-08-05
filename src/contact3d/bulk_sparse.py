@@ -6,10 +6,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .bulk_material import NeoHookeanMaterial
+from .mechanics.bulk_material import NeoHookeanMaterial
+from .mechanics.tet4 import (
+    Tet4Evaluation,
+    Tet4Mesh,
+    _validated_displacement,
+    evaluate_tet4,
+)
 from .model import FloatArray, IntArray
 from .sparse import CSRMatrix, SparseAccumulator
-from .tet4 import Tet4Evaluation, Tet4Mesh, _validated_displacement, evaluate_tet4
 
 
 @dataclass(frozen=True, slots=True)
