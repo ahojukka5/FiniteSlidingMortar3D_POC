@@ -6,6 +6,13 @@ from .bulk_material import (
     NeoHookeanResponse,
     evaluate_neo_hookean,
 )
+from .equilibrium import (
+    DeadLoad,
+    DirichletConstraints,
+    EquilibriumEvaluation,
+    EquilibriumProblem,
+    evaluate_equilibrium,
+)
 from .oracle import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
@@ -30,6 +37,10 @@ from .tet4 import (
 __all__ = [
     "BulkGeometryError",
     "CSRMatrix",
+    "DeadLoad",
+    "DirichletConstraints",
+    "EquilibriumEvaluation",
+    "EquilibriumProblem",
     "NeoHookeanMaterial",
     "NeoHookeanResponse",
     "SparseAccumulator",
@@ -40,6 +51,7 @@ __all__ = [
     "Tet4SparseEvaluation",
     "Tet4Sparsity",
     "assemble_tet4_sparse",
+    "evaluate_equilibrium",
     "evaluate_neo_hookean",
     "evaluate_tet4",
     "evaluate_tet4_mesh",
