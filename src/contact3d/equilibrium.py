@@ -7,15 +7,20 @@ from typing import Literal
 
 import numpy as np
 
-from .bulk_material import BulkGeometryError, NeoHookeanMaterial
-from .bulk_sparse import Tet4SparseEvaluation, Tet4Sparsity, assemble_tet4_sparse
 from .linear_solver import (
     LinearSolveDiagnostics,
     LinearSolverOptions,
     solve_reduced_system,
 )
-from .model import FloatArray, IntArray
-from .tet4 import Tet4Mesh
+from .mechanics import (
+    BulkGeometryError,
+    NeoHookeanMaterial,
+    Tet4Mesh,
+    Tet4SparseEvaluation,
+    Tet4Sparsity,
+    assemble_tet4_sparse,
+)
+from .mechanics.model import FloatArray, IntArray
 
 
 @dataclass(frozen=True, slots=True)
