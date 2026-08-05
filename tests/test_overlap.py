@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from contact3d import integrate_facet_pair
+from contact3d.mortar import integrate_facet_pair
 
 
 def _unit_quad(z: float = 0.0) -> np.ndarray:
@@ -17,7 +17,12 @@ def test_identical_quad_recovers_consistent_mass_matrix() -> None:
     points = _unit_quad()
     result = integrate_facet_pair(points, points.copy(), quadrature_points=7)
     expected = np.array(
-        [[4.0, 2.0, 1.0, 2.0], [2.0, 4.0, 2.0, 1.0], [1.0, 2.0, 4.0, 2.0], [2.0, 1.0, 2.0, 4.0]]
+        [
+            [4.0, 2.0, 1.0, 2.0],
+            [2.0, 4.0, 2.0, 1.0],
+            [1.0, 2.0, 4.0, 2.0],
+            [2.0, 1.0, 2.0, 4.0],
+        ]
     ) / 36.0
 
     assert result.overlap.area == pytest.approx(1.0)
