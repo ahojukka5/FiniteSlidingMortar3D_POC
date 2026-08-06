@@ -7,8 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from .coupled import CoupledEquilibriumProblem
-from .equilibrium import DeadLoad, DirichletConstraints
 from .load_path import CoupledPathState, LinearPathValue, with_coupled_boundary_data
+from .mechanics import DeadLoad, DirichletConstraints
 from .model import FloatArray, IntArray
 
 
