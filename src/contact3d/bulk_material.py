@@ -3,7 +3,7 @@
 This module is migration scaffolding only and is removed by issue #136.
 """
 
-from .mechanics.bulk_material import (
+from .mechanics import (
     BulkGeometryError,
     NeoHookeanMaterial,
     NeoHookeanResponse,
