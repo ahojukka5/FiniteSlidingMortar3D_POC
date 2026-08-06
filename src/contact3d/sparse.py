@@ -3,6 +3,6 @@
 This module is migration scaffolding only and is removed by issue #136.
 """
 
-from .mechanics.sparse import CSRMatrix, SparseAccumulator
+from .mechanics import CSRMatrix, SparseAccumulator
 
 __all__ = ["CSRMatrix", "SparseAccumulator"]
