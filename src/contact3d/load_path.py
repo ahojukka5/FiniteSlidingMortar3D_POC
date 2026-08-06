@@ -9,8 +9,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from .coupled import CoupledEquilibriumProblem
-from .mechanics import DeadLoad, DirichletConstraints
-from .model import FloatArray, IntArray
+from .mechanics import DeadLoad, DirichletConstraints, FloatArray, IntArray
 
 
 def _finite_parameter(value: float, *, name: str) -> float:
