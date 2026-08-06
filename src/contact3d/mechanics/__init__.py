@@ -24,6 +24,7 @@ from .sparse_tet4 import (
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
+    element_dofs,
 )
 from .tet4 import (
     Tet4Evaluation,
@@ -54,6 +55,7 @@ __all__ = [
     "Tet4SparseEvaluation",
     "Tet4Sparsity",
     "assemble_tet4_sparse",
+    "element_dofs",
     "evaluate_equilibrium",
     "evaluate_neo_hookean",
     "evaluate_tet4",
