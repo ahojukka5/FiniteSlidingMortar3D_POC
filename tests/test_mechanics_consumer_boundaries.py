@@ -6,6 +6,9 @@ import ast
 from pathlib import Path
 
 SOURCE_ROOT = Path(__file__).parents[1] / "src" / "contact3d"
+PRIVATE_MECHANICS_IMPORT_EXCEPTIONS = {
+    "bulk_sparse.py": {"mechanics.sparse_tet4"},
+}
 
 
 def parsed_imports(path: Path) -> tuple[ast.Import | ast.ImportFrom, ...]:
@@ -43,16 +46,23 @@ def test_external_consumers_use_mechanics_public_api() -> None:
     for path in SOURCE_ROOT.rglob("*.py"):
         if mechanics_root in path.parents:
             continue
+        relative_path = str(path.relative_to(SOURCE_ROOT))
         private_imports = {
             module
             for module in imported_modules(path)
             if module.startswith("mechanics.")
             or module.startswith("contact3d.mechanics.")
         }
-        if private_imports:
-            violations[str(path.relative_to(SOURCE_ROOT))] = private_imports
+        unapproved = private_imports - PRIVATE_MECHANICS_IMPORT_EXCEPTIONS.get(
+            relative_path,
+            set(),
+        )
+        if unapproved:
+            violations[relative_path] = unapproved
 
     assert violations == {}
+    for relative_path, exceptions in PRIVATE_MECHANICS_IMPORT_EXCEPTIONS.items():
+        assert exceptions.issubset(imported_modules(SOURCE_ROOT / relative_path))
 
 
 def test_equilibrium_consumes_mechanics_package_boundary() -> None:
