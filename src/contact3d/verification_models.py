@@ -6,11 +6,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .bulk_material import NeoHookeanMaterial
 from .coupled import CoupledEquilibriumProblem
 from .coupled_oracle import FrozenMatchingMortarInterface
-from .equilibrium import DeadLoad, DirichletConstraints
-from .tet4 import Tet4Mesh
+from .mechanics import DeadLoad, DirichletConstraints, NeoHookeanMaterial, Tet4Mesh
 
 
 @dataclass(frozen=True, slots=True)
