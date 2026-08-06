@@ -3,7 +3,7 @@
 This module is migration scaffolding only and is removed by issue #136.
 """
 
-from .mechanics.sparse_tet4 import (
+from .mechanics import (
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
