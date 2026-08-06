@@ -113,9 +113,10 @@ def test_bulk_facade_gathers_data_from_mechanics() -> None:
         "DirichletConstraints",
         "EquilibriumEvaluation",
         "EquilibriumProblem",
+        "NeoHookeanMaterial",
+        "Tet4Mesh",
         "evaluate_equilibrium",
     }.issubset(mechanics_names)
-    assert not mechanics_names.isdisjoint({"NeoHookeanMaterial", "Tet4Mesh"})
     assert imported_names(path, "equilibrium") == {
         "NewtonIteration",
         "NewtonOptions",
@@ -128,10 +129,13 @@ def test_bulk_facade_gathers_data_from_mechanics() -> None:
 def test_boundary_paths_consume_mechanics_data_contracts() -> None:
     for filename in ("load_path.py", "rigid_path.py"):
         path = SOURCE_ROOT / filename
-        assert {"DeadLoad", "DirichletConstraints"}.issubset(
-            imported_names(path, "mechanics")
-        )
-        assert "equilibrium" not in imported_modules(path)
+        assert {
+            "DeadLoad",
+            "DirichletConstraints",
+            "FloatArray",
+            "IntArray",
+        }.issubset(imported_names(path, "mechanics"))
+        assert not imported_modules(path).intersection({"equilibrium", "model"})
 
 
 def test_verification_models_use_mechanics_package_boundary() -> None:
