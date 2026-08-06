@@ -8,8 +8,7 @@ import numpy as np
 
 from .coupled import CoupledEquilibriumProblem
 from .load_path import CoupledPathState, LinearPathValue, with_coupled_boundary_data
-from .mechanics import DeadLoad, DirichletConstraints
-from .model import FloatArray, IntArray
+from .mechanics import DeadLoad, DirichletConstraints, FloatArray, IntArray
 
 
 def _vector3(value: FloatArray, *, name: str) -> FloatArray:
