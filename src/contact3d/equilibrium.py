@@ -18,9 +18,9 @@ from .mechanics import (
     DirichletConstraints,
     EquilibriumEvaluation,
     EquilibriumProblem,
+    FloatArray,
     evaluate_equilibrium,
 )
-from .mechanics.model import FloatArray
 
 __all__ = [
     "DeadLoad",
