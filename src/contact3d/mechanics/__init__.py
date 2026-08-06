@@ -13,6 +13,7 @@ from .equilibrium import (
     EquilibriumProblem,
     evaluate_equilibrium,
 )
+from .model import FloatArray, IntArray
 from .oracle import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
@@ -41,6 +42,8 @@ __all__ = [
     "DirichletConstraints",
     "EquilibriumEvaluation",
     "EquilibriumProblem",
+    "FloatArray",
+    "IntArray",
     "NeoHookeanMaterial",
     "NeoHookeanResponse",
     "SparseAccumulator",
