@@ -53,14 +53,9 @@ from .coupled import (
     solve_coupled_equilibrium,
 )
 from .equilibrium import (
-    DeadLoad,
-    DirichletConstraints,
-    EquilibriumEvaluation,
-    EquilibriumProblem,
     NewtonIteration,
     NewtonOptions,
     NewtonResult,
-    evaluate_equilibrium,
     solve_equilibrium,
     solve_load_steps,
 )
@@ -78,6 +73,10 @@ from .linear_solver import (
 from .mechanics import (
     BulkGeometryError,
     CSRMatrix,
+    DeadLoad,
+    DirichletConstraints,
+    EquilibriumEvaluation,
+    EquilibriumProblem,
     NeoHookeanMaterial,
     NeoHookeanResponse,
     SparseAccumulator,
@@ -88,6 +87,7 @@ from .mechanics import (
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
+    evaluate_equilibrium,
     evaluate_neo_hookean,
     evaluate_tet4,
     evaluate_tet4_mesh,
