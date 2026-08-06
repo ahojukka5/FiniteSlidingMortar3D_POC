@@ -3,7 +3,7 @@
 This module is migration scaffolding only and is removed by issue #136.
 """
 
-from .mechanics.oracle import (
+from .mechanics import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
     numerical_tet4_tangent,
