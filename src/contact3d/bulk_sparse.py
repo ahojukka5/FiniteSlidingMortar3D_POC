@@ -7,8 +7,8 @@ from .mechanics import (
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
-    element_dofs,
 )
+from .mechanics.sparse_tet4 import element_dofs
 
 __all__ = [
     "Tet4SparseEvaluation",
