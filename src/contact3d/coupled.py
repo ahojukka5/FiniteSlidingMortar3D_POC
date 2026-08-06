@@ -8,18 +8,21 @@ import numpy as np
 
 from .clipping import ClippingTopologyError
 from .enforcement_state import AugmentedLagrangeState, KKTDiagnostics
-from .equilibrium import DeadLoad, DirichletConstraints, NewtonOptions
+from .equilibrium import NewtonOptions
 from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
 from .mechanics import (
     BulkGeometryError,
     CSRMatrix,
+    DeadLoad,
+    DirichletConstraints,
+    FloatArray,
+    IntArray,
     NeoHookeanMaterial,
     Tet4Mesh,
     Tet4SparseEvaluation,
     Tet4Sparsity,
     assemble_tet4_sparse,
 )
-from .mechanics.model import FloatArray, IntArray
 from .pallets import PalletTopologyError
 from .parametric import InverseMapTopologyError
 
