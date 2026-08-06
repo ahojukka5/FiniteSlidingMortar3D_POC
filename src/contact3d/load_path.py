@@ -9,7 +9,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from .coupled import CoupledEquilibriumProblem
-from .equilibrium import DeadLoad, DirichletConstraints
+from .mechanics import DeadLoad, DirichletConstraints
 from .model import FloatArray, IntArray
 
 
