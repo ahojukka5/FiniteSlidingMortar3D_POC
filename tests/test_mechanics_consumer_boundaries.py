@@ -95,26 +95,15 @@ def test_linear_solver_consumes_mechanics_storage_boundary() -> None:
     )
 
 
-def test_coupled_equilibrium_uses_coupling_and_solver_boundaries() -> None:
+def test_coupled_facade_delegates_to_coupling_and_solver_owners() -> None:
     path = SOURCE_ROOT / "coupled.py"
     imports = imported_modules(path)
 
-    assert {"coupling", "mechanics"}.issubset(imports)
+    assert {"coupling", "solvers", "solvers.newton"}.issubset(imports)
+    assert "mechanics" not in imports
     assert not imports.intersection(
         {"bulk_material", "bulk_sparse", "mechanics.model", "model", "sparse", "tet4"}
     )
-    assert imported_names(path, "mechanics") == {"BulkGeometryError", "FloatArray"}
-    assert {
-        "ContactBranchSignature",
-        "ContactInterfaceEvaluation",
-        "ContactInterfaceUpdate",
-        "CoupledContactInterface",
-        "CoupledEquilibriumEvaluation",
-        "CoupledEquilibriumProblem",
-        "MortarContactInterface",
-        "evaluate_coupled_equilibrium",
-    }.issubset(imported_names(path, "coupling"))
-    assert imported_names(path, "equilibrium") == {"NewtonOptions"}
 
 
 def test_bulk_facade_gathers_data_from_mechanics() -> None:
