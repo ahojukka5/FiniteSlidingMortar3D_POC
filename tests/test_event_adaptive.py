@@ -209,7 +209,7 @@ def test_mixed_path_records_parameter_separately_from_solver_load() -> None:
 
 
 def test_scaled_adaptive_path_uses_localized_scale_aware_solver(monkeypatch) -> None:
-    import contact3d.event_adaptive as module
+    import contact3d.solvers.events.adaptive as module
 
     calls: list[tuple[object, object]] = []
     localization = TopologyEventLocalizationOptions(fraction_tolerance=1.0e-8)

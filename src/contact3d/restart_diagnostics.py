@@ -9,8 +9,11 @@ from typing import Literal
 
 import numpy as np
 
-from .adaptive_model import AdaptiveContactAttempt
-from .event_adaptive import AdaptiveTopologyEventBatch, EventAwareAdaptiveContactResult
+from .solvers.continuation import AdaptiveContactAttempt
+from .solvers.events.adaptive import (
+    AdaptiveTopologyEventBatch,
+    EventAwareAdaptiveContactResult,
+)
 from .topology_model import EventKind
 
 RestartTerminationReason = Literal["restart_loop"]
