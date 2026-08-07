@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .coupled import (
     AugmentationIteration,
@@ -14,8 +15,10 @@ from .coupled import (
 from .enforcement_state import AugmentedLagrangeState
 from .linear_solver import LinearSolveDiagnostics
 from .model import FloatArray
-from .multiplier_transport import MultiplierTransportRecord
 from .topology_events import ContactTopologyEventBatch
+
+if TYPE_CHECKING:
+    from .solvers.events.multiplier_transport import MultiplierTransportRecord
 
 
 @dataclass(frozen=True, slots=True)

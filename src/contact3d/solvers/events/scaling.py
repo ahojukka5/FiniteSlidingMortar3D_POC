@@ -9,7 +9,6 @@ from ...event_model import EventAwareCoupledNewtonResult
 from ...event_newton import solve_event_aware_coupled_equilibrium
 from ...mechanics import FloatArray
 from ...mortar.enforcement import AugmentedLagrangeState
-from ...multiplier_transport import MultiplierTransportRecord
 from ...scaling import (
     CoupledProblemScales,
     ScaleAwareConvergenceOptions,
@@ -27,6 +26,7 @@ from ..scaling import (
     _augmentation_row,
     _scaled_newton_history,
 )
+from .multiplier_transport import MultiplierTransportRecord
 
 
 @dataclass(frozen=True, slots=True)
