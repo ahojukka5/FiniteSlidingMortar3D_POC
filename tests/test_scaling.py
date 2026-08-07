@@ -195,11 +195,15 @@ def test_scale_option_validation() -> None:
         ScaleAwareConvergenceOptions(equilibrium_tolerance=-1.0)
 
 
-def test_scale_aware_augmented_solver_converts_newton_and_kkt_tolerances(monkeypatch) -> None:
-    import contact3d.scaled_solver as module
-    from contact3d.coupled import AugmentedContactOptions
-    from contact3d.equilibrium import NewtonOptions
-    from contact3d.scaled_solver import solve_scale_aware_augmented_contact
+def test_scale_aware_augmented_solver_converts_newton_and_kkt_tolerances(
+    monkeypatch,
+) -> None:
+    import contact3d.solvers.scaling as module
+    from contact3d.solvers import (
+        AugmentedContactOptions,
+        NewtonOptions,
+        solve_scale_aware_augmented_contact,
+    )
 
     @dataclass(frozen=True, slots=True)
     class SolverInterface(Interface):
@@ -215,6 +219,9 @@ def test_scale_aware_augmented_solver_converts_newton_and_kkt_tolerances(monkeyp
     class SolverProblem(Problem):
         def initial_states(self):
             return tuple(interface.initial_state() for interface in self.interfaces)
+
+        def validate_states(self, states):
+            return self.initial_states() if states is None else tuple(states)
 
     problem = SolverProblem(
         Mesh(np.array([[0.0, 0.0, 0.0], [2.0, 1.0, 1.0]])),
@@ -251,7 +258,16 @@ def test_scale_aware_augmented_solver_converts_newton_and_kkt_tolerances(monkeyp
         Signature((True,), (True,)),
     )
 
-    def fake_solve(problem, states, displacement, *, load_factor, options, event_policy, tolerance):
+    def fake_solve(
+        problem,
+        states,
+        displacement,
+        *,
+        load_factor,
+        options,
+        event_policy,
+        tolerance,
+    ):
         observed["absolute_tolerance"] = options.absolute_tolerance
         evaluation = SimpleNamespace(
             contacts=(contact_value,),
@@ -279,7 +295,11 @@ def test_scale_aware_augmented_solver_converts_newton_and_kkt_tolerances(monkeyp
         projection_tolerance=1.0e-8,
         multiplier_tolerance=1.0e-8,
     )
-    solved = solve_scale_aware_augmented_contact(problem, options=options, scaling=scaling)
+    solved = solve_scale_aware_augmented_contact(
+        problem,
+        options=options,
+        scaling=scaling,
+    )
     assert solved.converged
     assert observed["absolute_tolerance"] == pytest.approx(3.0e-8 * scales.force)
     assert solved.history[0].normalized_equilibrium_residual == pytest.approx(2.0e-7)
