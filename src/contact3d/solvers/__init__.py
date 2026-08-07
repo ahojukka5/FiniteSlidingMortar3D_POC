@@ -27,6 +27,12 @@ from .results import (
     CoupledTerminationReason,
     NewtonOptions,
 )
+from .scaling import (
+    ScaleAwareAugmentationIteration,
+    ScaleAwareAugmentedContactResult,
+    ScaleAwareNewtonIteration,
+    solve_scale_aware_augmented_contact,
+)
 
 __all__ = [
     "AugmentationIteration",
@@ -45,6 +51,9 @@ __all__ = [
     "NewtonOptions",
     "PreconditionerFactory",
     "PreconditionerKind",
+    "ScaleAwareAugmentationIteration",
+    "ScaleAwareAugmentedContactResult",
+    "ScaleAwareNewtonIteration",
     "block_jacobi_preconditioner_factory",
     "extract_csr_submatrix",
     "field_split_preconditioner_factory",
@@ -52,4 +61,5 @@ __all__ = [
     "solve_coupled_equilibrium",
     "solve_linear_system",
     "solve_reduced_system",
+    "solve_scale_aware_augmented_contact",
 ]
