@@ -63,14 +63,14 @@ def fake_evaluation(value: float, *, tangent: bool = True):
 
 
 def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
-    import contact3d.event_geometry as geometry_module
+    import contact3d.solvers.events.localization as localization_module
     import contact3d.solvers.events.newton as newton_module
 
     def evaluate(problem, displacement, states, *, assemble_tangent=True, **kwargs):
         del problem, states, kwargs
         return fake_evaluation(float(np.asarray(displacement)[0]), tangent=assemble_tangent)
 
-    monkeypatch.setattr(geometry_module, "evaluate_coupled_equilibrium", evaluate)
+    monkeypatch.setattr(localization_module, "evaluate_coupled_equilibrium", evaluate)
     monkeypatch.setattr(newton_module, "evaluate_coupled_equilibrium", evaluate)
     result = solve_event_aware_coupled_equilibrium(
         Problem(),
@@ -93,7 +93,7 @@ def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
 
 
 def test_event_restart_clears_tangent_only_singularity(monkeypatch) -> None:
-    import contact3d.event_geometry as geometry_module
+    import contact3d.solvers.events.localization as localization_module
     import contact3d.solvers.events.newton as newton_module
 
     def evaluate(problem, displacement, states, *, assemble_tangent=True, **kwargs):
@@ -103,7 +103,7 @@ def test_event_restart_clears_tangent_only_singularity(monkeypatch) -> None:
             raise ClippingTopologyError("synthetic tangent-only coincidence")
         return fake_evaluation(value, tangent=assemble_tangent)
 
-    monkeypatch.setattr(geometry_module, "evaluate_coupled_equilibrium", evaluate)
+    monkeypatch.setattr(localization_module, "evaluate_coupled_equilibrium", evaluate)
     monkeypatch.setattr(newton_module, "evaluate_coupled_equilibrium", evaluate)
     result = solve_event_aware_coupled_equilibrium(
         Problem(),
@@ -156,5 +156,10 @@ def test_production_geometry_signature_records_polygon_and_pallet_counts(monkeyp
     )
     monkeypatch.setattr(module, "polygon_signed_area", lambda values: 1.25)
 
-    signatures = module._event_signatures(problem, evaluation, tolerance=1.0e-12)
+    signatures = module.contact_topology_signatures(
+        problem,
+        evaluation.displacement,
+        evaluation.contacts,
+        tolerance=1.0e-12,
+    )
     assert signatures[0].geometry_tokens == ((0, 0, 5, 5, 1),)
