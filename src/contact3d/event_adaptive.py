@@ -7,20 +7,20 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .adaptive_model import (
-    AdaptiveAcceptedStep,
-    AdaptiveAttemptAction,
-    AdaptiveContactAttempt,
-    AdaptiveContactResult,
-)
-from .adaptive_options import AdaptiveContactOptions
-from .adaptive_solver import solve_adaptive_contact_path
 from .coupled import CoupledEquilibriumProblem
 from .enforcement_state import AugmentedLagrangeState
 from .event_augmented import solve_event_aware_augmented_contact
 from .event_scaled import solve_event_aware_scale_aware_augmented_contact
 from .load_path import CoupledLoadPath
 from .model import FloatArray
+from .solvers.continuation import (
+    AdaptiveAcceptedStep,
+    AdaptiveAttemptAction,
+    AdaptiveContactAttempt,
+    AdaptiveContactOptions,
+    AdaptiveContactResult,
+    solve_adaptive_contact_path,
+)
 from .topology_events import (
     ContactTopologyEvent,
     ContactTopologyEventBatch,
