@@ -1,10 +1,5 @@
 """Adaptive load continuation, scaling, and penalty-control public API."""
 
-from .adaptive_solver import (
-    contact_penalties,
-    solve_adaptive_contact_path,
-    with_contact_penalties,
-)
 from .load_path import (
     CoupledLoadPath,
     CoupledPathState,
@@ -37,7 +32,10 @@ from .solvers import (
     ScaleAwareAugmentationIteration,
     ScaleAwareAugmentedContactResult,
     ScaleAwareNewtonIteration,
+    contact_penalties,
+    solve_adaptive_contact_path,
     solve_scale_aware_augmented_contact,
+    with_contact_penalties,
 )
 from .staged_rigid_path import (
     RigidBodyMotionSegment,
