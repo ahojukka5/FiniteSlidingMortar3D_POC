@@ -1,6 +1,16 @@
 """Nonlinear and linear solution algorithms for coupled contact problems."""
 
 from .augmented import solve_augmented_contact
+from .continuation import (
+    AdaptiveAcceptedStep,
+    AdaptiveAttemptAction,
+    AdaptiveContactAttempt,
+    AdaptiveContactOptions,
+    AdaptiveContactResult,
+    AdaptiveLoadOptions,
+    AdaptivePenaltyOptions,
+    AdaptiveTerminationReason,
+)
 from .linear import (
     LinearBackend,
     LinearPreconditioner,
@@ -35,6 +45,14 @@ from .scaling import (
 )
 
 __all__ = [
+    "AdaptiveAcceptedStep",
+    "AdaptiveAttemptAction",
+    "AdaptiveContactAttempt",
+    "AdaptiveContactOptions",
+    "AdaptiveContactResult",
+    "AdaptiveLoadOptions",
+    "AdaptivePenaltyOptions",
+    "AdaptiveTerminationReason",
     "AugmentationIteration",
     "AugmentedContactOptions",
     "AugmentedContactResult",
