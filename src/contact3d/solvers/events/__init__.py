@@ -11,17 +11,17 @@ from .results import (
     EventAwareCoupledNewtonResult,
 )
 
-_SCALING_EXPORTS = frozenset(
-    {
-        "EventAwareScaleAwareAugmentedContactResult",
-        "solve_event_aware_scale_aware_augmented_contact",
-    }
-)
+_LAZY_EXPORTS = {
+    "EventAwareScaleAwareAugmentedContactResult": ".scaling",
+    "solve_event_aware_augmented_contact": ".augmentation",
+    "solve_event_aware_scale_aware_augmented_contact": ".scaling",
+}
 
 
 def __getattr__(name: str) -> object:
-    if name in _SCALING_EXPORTS:
-        module = import_module(f"{__name__}.scaling")
+    module_name = _LAZY_EXPORTS.get(name)
+    if module_name is not None:
+        module = import_module(f"{__name__}{module_name}")
         value = getattr(module, name)
         globals()[name] = value
         return value
@@ -29,7 +29,7 @@ def __getattr__(name: str) -> object:
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | _SCALING_EXPORTS)
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
 __all__ = [
@@ -37,6 +37,7 @@ __all__ = [
     "EventAwareCoupledNewtonResult",
     "EventAwareScaleAwareAugmentedContactResult",
     "MultiplierTransportRecord",
+    "solve_event_aware_augmented_contact",
     "solve_event_aware_scale_aware_augmented_contact",
     "transport_multiplier_states",
 ]
