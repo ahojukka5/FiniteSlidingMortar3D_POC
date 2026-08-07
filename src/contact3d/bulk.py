@@ -91,9 +91,6 @@ from .mechanics import (
     evaluate_neo_hookean,
     evaluate_tet4,
     evaluate_tet4_mesh,
-    numerical_neo_hookean_tangent,
-    numerical_tet4_mesh_tangent,
-    numerical_tet4_tangent,
     tet4_deformation_gradient,
 )
 
@@ -169,9 +166,6 @@ __all__ = [
     "evaluate_tet4_mesh",
     "extract_csr_submatrix",
     "field_split_preconditioner_factory",
-    "numerical_neo_hookean_tangent",
-    "numerical_tet4_mesh_tangent",
-    "numerical_tet4_tangent",
     "propose_interface_penalties",
     "solve_adaptive_contact_path",
     "solve_augmented_contact",

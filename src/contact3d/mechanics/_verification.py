@@ -1,4 +1,4 @@
-"""Centered-difference verification oracles for bulk mechanics."""
+"""Internal centered-difference verification oracles for bulk mechanics."""
 
 from __future__ import annotations
 

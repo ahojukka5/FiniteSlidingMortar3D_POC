@@ -14,11 +14,6 @@ from .equilibrium import (
     evaluate_equilibrium,
 )
 from .model import FloatArray, IntArray
-from .oracle import (
-    numerical_neo_hookean_tangent,
-    numerical_tet4_mesh_tangent,
-    numerical_tet4_tangent,
-)
 from .sparse import CSRMatrix, SparseAccumulator
 from .sparse_tet4 import (
     Tet4SparseEvaluation,
@@ -58,8 +53,5 @@ __all__ = [
     "evaluate_neo_hookean",
     "evaluate_tet4",
     "evaluate_tet4_mesh",
-    "numerical_neo_hookean_tangent",
-    "numerical_tet4_mesh_tangent",
-    "numerical_tet4_tangent",
     "tet4_deformation_gradient",
 ]

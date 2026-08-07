@@ -8,6 +8,8 @@ from pathlib import Path
 SOURCE_ROOT = Path(__file__).parents[1] / "src" / "contact3d"
 PRIVATE_MECHANICS_IMPORT_EXCEPTIONS = {
     "bulk_sparse.py": {"mechanics.sparse_tet4"},
+    # Compatibility façade only; removed with the other migration shims in #136.
+    "bulk_oracle.py": {"mechanics._verification"},
 }
 
 

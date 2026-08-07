@@ -12,7 +12,7 @@ from contact3d.mechanics import (
     evaluate_tet4,
     evaluate_tet4_mesh,
 )
-from contact3d.mechanics.oracle import (
+from contact3d.mechanics._verification import (
     numerical_neo_hookean_tangent,
     numerical_tet4_mesh_tangent,
     numerical_tet4_tangent,
