@@ -6,7 +6,6 @@ from .event_adaptive import (
     solve_event_aware_adaptive_contact_path,
 )
 from .event_augmented import solve_event_aware_augmented_contact
-from .event_model import EventAwareAugmentedContactResult, EventAwareCoupledNewtonResult
 from .event_newton import solve_event_aware_coupled_equilibrium
 from .restart_diagnostics import (
     RestartAttemptDiagnostic,
@@ -18,6 +17,8 @@ from .restart_diagnostics import (
     analyze_restart_diagnostics,
 )
 from .solvers.events import (
+    EventAwareAugmentedContactResult,
+    EventAwareCoupledNewtonResult,
     EventAwareScaleAwareAugmentedContactResult,
     MultiplierTransportRecord,
     solve_event_aware_scale_aware_augmented_contact,
