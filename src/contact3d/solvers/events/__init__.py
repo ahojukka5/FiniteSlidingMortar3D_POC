@@ -6,6 +6,10 @@ from .multiplier_transport import (
     MultiplierTransportRecord,
     transport_multiplier_states,
 )
+from .results import (
+    EventAwareAugmentedContactResult,
+    EventAwareCoupledNewtonResult,
+)
 
 _SCALING_EXPORTS = frozenset(
     {
@@ -29,6 +33,8 @@ def __dir__() -> list[str]:
 
 
 __all__ = [
+    "EventAwareAugmentedContactResult",
+    "EventAwareCoupledNewtonResult",
     "EventAwareScaleAwareAugmentedContactResult",
     "MultiplierTransportRecord",
     "solve_event_aware_scale_aware_augmented_contact",

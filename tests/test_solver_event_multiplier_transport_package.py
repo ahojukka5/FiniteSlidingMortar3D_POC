@@ -35,20 +35,27 @@ def test_legacy_multiplier_transport_preserves_object_identity() -> None:
     assert legacy.transport_multiplier_states is events.transport_multiplier_states
 
 
-def test_event_solver_consumers_use_the_owning_transport_module() -> None:
+def test_event_solver_owners_use_the_owning_transport_module() -> None:
     model_imports = imported_modules(SOURCE_ROOT / "event_model.py")
-    newton_imports = imported_modules(SOURCE_ROOT / "event_newton.py")
+    root_newton_imports = imported_modules(SOURCE_ROOT / "event_newton.py")
     aggregate_imports = imported_modules(SOURCE_ROOT / "event_solver.py")
+    result_imports = imported_modules(
+        SOURCE_ROOT / "solvers" / "events" / "results.py"
+    )
     scaling_imports = imported_modules(
         SOURCE_ROOT / "solvers" / "events" / "scaling.py"
     )
+    newton_owner = SOURCE_ROOT / "solvers" / "events" / "newton.py"
 
-    assert ".solvers.events.multiplier_transport" in model_imports
-    assert ".solvers.events.multiplier_transport" in newton_imports
+    assert ".multiplier_transport" in result_imports
+    if newton_owner.exists():
+        assert ".multiplier_transport" in imported_modules(newton_owner)
+        assert ".solvers.events.newton" in root_newton_imports
+    else:
+        assert ".solvers.events.multiplier_transport" in root_newton_imports
     assert ".solvers.events" in aggregate_imports
     assert ".multiplier_transport" in scaling_imports
     assert ".multiplier_transport" not in model_imports
-    assert ".multiplier_transport" not in newton_imports
     assert "...multiplier_transport" not in scaling_imports
 
 
