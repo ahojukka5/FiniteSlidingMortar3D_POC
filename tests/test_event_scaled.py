@@ -5,9 +5,9 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from contact3d.coupled import AugmentedContactOptions
-from contact3d.event_scaled import solve_event_aware_scale_aware_augmented_contact
 from contact3d.scaling import ScaleAwareConvergenceOptions
+from contact3d.solvers import AugmentedContactOptions
+from contact3d.solvers.events import solve_event_aware_scale_aware_augmented_contact
 from contact3d.topology_events import (
     ContactTopologyEvent,
     ContactTopologyEventBatch,
@@ -44,7 +44,7 @@ def _batch() -> ContactTopologyEventBatch:
 
 
 def test_scale_aware_wrapper_retains_events_and_normalizes_newton(monkeypatch) -> None:
-    import contact3d.event_scaled as module
+    import contact3d.solvers.events.scaling as module
 
     batch = _batch()
     scales = SimpleNamespace(force=250.0)
@@ -58,7 +58,6 @@ def test_scale_aware_wrapper_retains_events_and_normalizes_newton(monkeypatch) -
     )
 
     monkeypatch.setattr(module, "coupled_problem_scales", lambda problem: scales)
-    monkeypatch.setattr(module, "_validated_states", lambda problem, states: ())
     monkeypatch.setattr(module, "_scaled_newton_history", lambda result, values: ())
     monkeypatch.setattr(module, "_all_kkt_converged", lambda *args: True)
     monkeypatch.setattr(
@@ -89,8 +88,12 @@ def test_scale_aware_wrapper_retains_events_and_normalizes_newton(monkeypatch) -
         enabled=True,
         equilibrium_tolerance=3.0e-8,
     )
+    problem = SimpleNamespace(
+        interfaces=(),
+        validate_states=lambda states: (),
+    )
     result = solve_event_aware_scale_aware_augmented_contact(
-        SimpleNamespace(interfaces=()),
+        problem,
         options=AugmentedContactOptions(maximum_augmentations=2),
         scaling=scaling,
         event_options=localization,

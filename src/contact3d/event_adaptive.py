@@ -10,7 +10,6 @@ import numpy as np
 from .coupled import CoupledEquilibriumProblem
 from .enforcement_state import AugmentedLagrangeState
 from .event_augmented import solve_event_aware_augmented_contact
-from .event_scaled import solve_event_aware_scale_aware_augmented_contact
 from .load_path import CoupledLoadPath
 from .model import FloatArray
 from .solvers.continuation import (
@@ -21,6 +20,7 @@ from .solvers.continuation import (
     AdaptiveContactResult,
     solve_adaptive_contact_path,
 )
+from .solvers.events import solve_event_aware_scale_aware_augmented_contact
 from .topology_events import (
     ContactTopologyEvent,
     ContactTopologyEventBatch,
