@@ -14,6 +14,7 @@ from .results import (
 _LAZY_EXPORTS = {
     "EventAwareScaleAwareAugmentedContactResult": ".scaling",
     "solve_event_aware_augmented_contact": ".augmentation",
+    "solve_event_aware_coupled_equilibrium": ".newton",
     "solve_event_aware_scale_aware_augmented_contact": ".scaling",
 }
 
@@ -38,6 +39,7 @@ __all__ = [
     "EventAwareScaleAwareAugmentedContactResult",
     "MultiplierTransportRecord",
     "solve_event_aware_augmented_contact",
+    "solve_event_aware_coupled_equilibrium",
     "solve_event_aware_scale_aware_augmented_contact",
     "transport_multiplier_states",
 ]
