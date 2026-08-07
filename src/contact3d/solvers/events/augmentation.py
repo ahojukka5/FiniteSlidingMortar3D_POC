@@ -5,11 +5,11 @@ from __future__ import annotations
 import numpy as np
 
 from ...coupling import CoupledEquilibriumProblem
-from ...event_newton import solve_event_aware_coupled_equilibrium
 from ...mechanics import FloatArray
 from ...mortar.enforcement import AugmentedLagrangeState
 from ...topology_events import TopologyEventLocalizationOptions
 from ..results import AugmentationIteration, AugmentedContactOptions
+from .newton import solve_event_aware_coupled_equilibrium
 from .results import EventAwareAugmentedContactResult, EventAwareCoupledNewtonResult
 
 

@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from ...coupling import CoupledEquilibriumProblem
-from ...event_model import EventAwareCoupledNewtonResult
-from ...event_newton import solve_event_aware_coupled_equilibrium
 from ...mechanics import FloatArray
 from ...mortar.enforcement import AugmentedLagrangeState
 from ...scaling import (
@@ -27,6 +25,8 @@ from ..scaling import (
     _scaled_newton_history,
 )
 from .multiplier_transport import MultiplierTransportRecord
+from .newton import solve_event_aware_coupled_equilibrium
+from .results import EventAwareCoupledNewtonResult
 
 
 @dataclass(frozen=True, slots=True)

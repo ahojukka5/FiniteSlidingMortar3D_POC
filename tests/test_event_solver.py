@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from contact3d.clipping import ClippingTopologyError
-from contact3d.event_solver import solve_event_aware_coupled_equilibrium
+from contact3d.solvers.events.newton import solve_event_aware_coupled_equilibrium
 from contact3d.sparse import CSRMatrix
 
 
@@ -30,6 +30,9 @@ class Problem:
 
     def initial_states(self):
         return (object(),)
+
+    def validate_states(self, states):
+        return self.initial_states() if states is None else tuple(states)
 
 
 def fake_evaluation(value: float, *, tangent: bool = True):
@@ -61,7 +64,7 @@ def fake_evaluation(value: float, *, tangent: bool = True):
 
 def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
     import contact3d.event_geometry as geometry_module
-    import contact3d.event_newton as newton_module
+    import contact3d.solvers.events.newton as newton_module
 
     def evaluate(problem, displacement, states, *, assemble_tangent=True, **kwargs):
         del problem, states, kwargs
@@ -91,7 +94,7 @@ def test_event_aware_newton_restarts_on_right_branch(monkeypatch) -> None:
 
 def test_event_restart_clears_tangent_only_singularity(monkeypatch) -> None:
     import contact3d.event_geometry as geometry_module
-    import contact3d.event_newton as newton_module
+    import contact3d.solvers.events.newton as newton_module
 
     def evaluate(problem, displacement, states, *, assemble_tangent=True, **kwargs):
         del problem, states, kwargs
