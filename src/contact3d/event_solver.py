@@ -1,14 +1,5 @@
 """Public API for event-localized coupled contact solvers."""
 
-from .restart_diagnostics import (
-    RestartAttemptDiagnostic,
-    RestartCount,
-    RestartDiagnosticOptions,
-    RestartDiagnostics,
-    RestartEventRecord,
-    RestartLoopDiagnostic,
-    analyze_restart_diagnostics,
-)
 from .solvers.events import (
     AdaptiveTopologyEventBatch,
     EventAwareAdaptiveContactResult,
@@ -16,6 +7,13 @@ from .solvers.events import (
     EventAwareCoupledNewtonResult,
     EventAwareScaleAwareAugmentedContactResult,
     MultiplierTransportRecord,
+    RestartAttemptDiagnostic,
+    RestartCount,
+    RestartDiagnosticOptions,
+    RestartDiagnostics,
+    RestartEventRecord,
+    RestartLoopDiagnostic,
+    analyze_restart_diagnostics,
     solve_event_aware_adaptive_contact_path,
     solve_event_aware_augmented_contact,
     solve_event_aware_coupled_equilibrium,

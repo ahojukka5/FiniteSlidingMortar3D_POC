@@ -4,12 +4,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from contact3d.adaptive import AdaptiveContactAttempt
-from contact3d.event_adaptive import (
+from contact3d.solvers.continuation import AdaptiveContactAttempt
+from contact3d.solvers.events import (
     AdaptiveTopologyEventBatch,
     EventAwareAdaptiveContactResult,
-)
-from contact3d.event_solver import (
     RestartDiagnosticOptions,
     analyze_restart_diagnostics,
 )
