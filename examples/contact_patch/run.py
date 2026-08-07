@@ -7,9 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
-from contact3d import solve_adaptive_contact_path
 from contact3d.benchmark_artifacts import write_tet4_vtu
 from contact3d.benchmark_plots import write_line_chart
+from contact3d.solvers import solve_adaptive_contact_path
 
 from .model import ContactPatchModel, build_model, solver_options
 

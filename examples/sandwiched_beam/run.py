@@ -9,22 +9,22 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from contact3d import (
+from contact3d.benchmark_artifacts import write_tet4_vtu
+from contact3d.benchmark_plots import write_line_chart, write_mesh_projection_overlay
+from contact3d.mortar.enforcement import AugmentedLagrangeState
+from contact3d.scaling import ScaleAwareConvergenceOptions
+from contact3d.solvers import (
+    AdaptiveAcceptedStep,
     AdaptiveContactOptions,
     AdaptiveLoadOptions,
     AdaptivePenaltyOptions,
     AugmentedContactOptions,
+    LinearSolverOptions,
     NewtonOptions,
-    ScaleAwareConvergenceOptions,
     solve_adaptive_contact_path,
     solve_equilibrium,
+    solve_scale_aware_augmented_contact,
 )
-from contact3d.adaptive_model import AdaptiveAcceptedStep
-from contact3d.benchmark_artifacts import write_tet4_vtu
-from contact3d.benchmark_plots import write_line_chart, write_mesh_projection_overlay
-from contact3d.enforcement_state import AugmentedLagrangeState
-from contact3d.linear_solver import LinearSolverOptions
-from contact3d.scaled_solver import solve_scale_aware_augmented_contact
 
 from .model import SandwichedBeamModel, build_model
 

@@ -7,10 +7,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from contact3d import (
-    AdaptiveContactOptions,
-    AdaptiveLoadOptions,
-    AdaptivePenaltyOptions,
-    AugmentedContactOptions,
     ContactPair,
     ContactSurface,
     CoupledEquilibriumProblem,
@@ -18,12 +14,18 @@ from contact3d import (
     DirichletConstraints,
     MortarContactInterface,
     NeoHookeanMaterial,
-    NewtonOptions,
-    ScaleAwareConvergenceOptions,
     StagedRigidBodyBoundaryPath,
     Tet4Mesh,
 )
-from contact3d.linear_solver import LinearSolverOptions
+from contact3d.scaling import ScaleAwareConvergenceOptions
+from contact3d.solvers import (
+    AdaptiveContactOptions,
+    AdaptiveLoadOptions,
+    AdaptivePenaltyOptions,
+    AugmentedContactOptions,
+    LinearSolverOptions,
+    NewtonOptions,
+)
 
 
 @dataclass(frozen=True, slots=True)

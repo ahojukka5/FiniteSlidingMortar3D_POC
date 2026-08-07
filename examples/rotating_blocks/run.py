@@ -13,7 +13,7 @@ from contact3d.benchmark_plots import (
     write_line_chart,
     write_mesh_projection_overlay,
 )
-from contact3d.event_solver import solve_event_aware_adaptive_contact_path
+from contact3d.solvers.events import solve_event_aware_adaptive_contact_path
 
 from .model import RotatingBlocksModel, build_model, solver_options
 
