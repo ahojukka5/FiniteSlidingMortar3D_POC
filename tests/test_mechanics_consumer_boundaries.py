@@ -90,8 +90,8 @@ def test_equilibrium_facade_delegates_to_mechanics_and_solver_owners() -> None:
     )
 
 
-def test_linear_solver_consumes_mechanics_storage_boundary() -> None:
-    path = SOURCE_ROOT / "linear_solver.py"
+def test_linear_solver_owner_consumes_mechanics_storage_boundary() -> None:
+    path = SOURCE_ROOT / "solvers" / "linear.py"
     imports = imported_modules(path)
 
     assert "mechanics" in imports

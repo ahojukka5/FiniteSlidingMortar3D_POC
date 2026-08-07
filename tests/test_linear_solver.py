@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from contact3d import CSRMatrix
-from contact3d.linear_solver import (
+from contact3d.mechanics import CSRMatrix
+from contact3d.solvers.linear import (
     LinearSolverOptions,
     block_jacobi_preconditioner_factory,
     extract_csr_submatrix,
