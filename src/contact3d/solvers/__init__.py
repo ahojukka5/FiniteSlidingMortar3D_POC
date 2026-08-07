@@ -29,7 +29,7 @@ from .linear import (
     solve_linear_system,
     solve_reduced_system,
 )
-from .newton import solve_coupled_equilibrium
+from .newton import solve_coupled_equilibrium, solve_equilibrium, solve_load_steps
 from .results import (
     AugmentationIteration,
     AugmentedContactOptions,
@@ -39,7 +39,10 @@ from .results import (
     CoupledNewtonIteration,
     CoupledNewtonResult,
     CoupledTerminationReason,
+    NewtonIteration,
     NewtonOptions,
+    NewtonResult,
+    TerminationReason,
 )
 from .scaling import (
     ScaleAwareAugmentationIteration,
@@ -71,12 +74,15 @@ __all__ = [
     "LinearSolveDiagnostics",
     "LinearSolveResult",
     "LinearSolverOptions",
+    "NewtonIteration",
     "NewtonOptions",
+    "NewtonResult",
     "PreconditionerFactory",
     "PreconditionerKind",
     "ScaleAwareAugmentationIteration",
     "ScaleAwareAugmentedContactResult",
     "ScaleAwareNewtonIteration",
+    "TerminationReason",
     "block_jacobi_preconditioner_factory",
     "contact_penalties",
     "extract_csr_submatrix",
@@ -84,7 +90,9 @@ __all__ = [
     "solve_adaptive_contact_path",
     "solve_augmented_contact",
     "solve_coupled_equilibrium",
+    "solve_equilibrium",
     "solve_linear_system",
+    "solve_load_steps",
     "solve_reduced_system",
     "solve_scale_aware_augmented_contact",
     "with_contact_penalties",

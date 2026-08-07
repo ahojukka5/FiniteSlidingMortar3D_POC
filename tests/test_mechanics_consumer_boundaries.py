@@ -67,23 +67,27 @@ def test_external_consumers_use_mechanics_public_api() -> None:
         assert exceptions.issubset(imported_modules(SOURCE_ROOT / relative_path))
 
 
-def test_equilibrium_consumes_mechanics_package_boundary() -> None:
+def test_equilibrium_facade_delegates_to_mechanics_and_solver_owners() -> None:
     path = SOURCE_ROOT / "equilibrium.py"
     imports = imported_modules(path)
 
-    assert "mechanics" in imports
+    assert {"mechanics", "solvers.newton", "solvers.results"}.issubset(imports)
     assert not imports.intersection(
         {"bulk_material", "bulk_sparse", "mechanics.model", "model", "sparse", "tet4"}
     )
     assert {
-        "BulkGeometryError",
         "DeadLoad",
         "DirichletConstraints",
         "EquilibriumEvaluation",
         "EquilibriumProblem",
-        "FloatArray",
         "evaluate_equilibrium",
     }.issubset(imported_names(path, "mechanics"))
+    assert {"solve_equilibrium", "solve_load_steps"}.issubset(
+        imported_names(path, "solvers.newton")
+    )
+    assert {"NewtonIteration", "NewtonOptions", "NewtonResult"}.issubset(
+        imported_names(path, "solvers.results")
+    )
 
 
 def test_linear_solver_consumes_mechanics_storage_boundary() -> None:
@@ -101,7 +105,8 @@ def test_coupled_facade_delegates_to_coupling_and_solver_owners() -> None:
     path = SOURCE_ROOT / "coupled.py"
     imports = imported_modules(path)
 
-    assert {"coupling", "solvers", "solvers.newton"}.issubset(imports)
+    assert {"coupling", "solvers"}.issubset(imports)
+    assert "solvers.newton" not in imports
     assert "mechanics" not in imports
     assert not imports.intersection(
         {"bulk_material", "bulk_sparse", "mechanics.model", "model", "sparse", "tet4"}

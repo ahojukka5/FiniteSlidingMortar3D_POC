@@ -2,20 +2,18 @@ from __future__ import annotations
 
 import numpy as np
 
-from contact3d import (
+from contact3d.mechanics import (
     DeadLoad,
     DirichletConstraints,
     EquilibriumProblem,
     NeoHookeanMaterial,
-    NewtonOptions,
     SparseAccumulator,
     Tet4Mesh,
     Tet4Sparsity,
     assemble_tet4_sparse,
     evaluate_tet4_mesh,
-    solve_equilibrium,
-    solve_load_steps,
 )
+from contact3d.solvers import NewtonOptions, solve_equilibrium, solve_load_steps
 
 
 def cube_star_mesh() -> Tet4Mesh:

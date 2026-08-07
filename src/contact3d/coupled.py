@@ -27,7 +27,6 @@ from .solvers import (
     solve_augmented_contact,
     solve_coupled_equilibrium,
 )
-from .solvers.newton import _linear_failure_reason as _linear_failure_reason
 
 __all__ = [
     "AugmentationIteration",

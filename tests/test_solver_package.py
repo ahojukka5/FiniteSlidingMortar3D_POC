@@ -8,7 +8,6 @@ import contact3d.coupled as legacy_coupled
 import contact3d.coupling as coupling
 import contact3d.equilibrium as equilibrium
 import contact3d.solvers as solvers
-import contact3d.solvers.newton as solver_newton
 
 SOURCE_ROOT = Path(__file__).parents[1] / "src" / "contact3d"
 
@@ -62,7 +61,6 @@ def test_legacy_coupling_exports_preserve_object_identity() -> None:
         assert getattr(legacy_coupled, name) is getattr(coupling, name)
     for name in solver_names:
         assert getattr(legacy_coupled, name) is getattr(solvers, name)
-    assert legacy_coupled._linear_failure_reason is solver_newton._linear_failure_reason
 
 
 def test_newton_options_have_one_owner_during_solver_migration() -> None:
