@@ -52,6 +52,6 @@ def test_production_event_composition_uses_the_owning_package() -> None:
     aggregate_imports = imported_modules(SOURCE_ROOT / "event_solver.py")
 
     assert ".event_scaled" not in adaptive_imports
-    assert ".solvers.events" in adaptive_imports
+    assert ".solvers.events.adaptive" in adaptive_imports
     assert ".event_scaled" not in aggregate_imports
     assert ".solvers.events" in aggregate_imports

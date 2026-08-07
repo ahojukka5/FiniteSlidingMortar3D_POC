@@ -92,8 +92,9 @@ def test_continuation_implementation_avoids_legacy_solver_facades() -> None:
     assert imports.isdisjoint(forbidden)
 
 
-def test_event_adaptive_consumes_the_solver_owned_driver() -> None:
+def test_event_adaptive_consumes_the_event_solver_owned_driver() -> None:
     imports = imported_modules(SOURCE_ROOT / "event_adaptive.py")
 
     assert ".adaptive_solver" not in imports
-    assert ".solvers.continuation" in imports
+    assert ".solvers.continuation" not in imports
+    assert ".solvers.events.adaptive" in imports

@@ -12,7 +12,10 @@ from .results import (
 )
 
 _LAZY_EXPORTS = {
+    "AdaptiveTopologyEventBatch": ".adaptive",
+    "EventAwareAdaptiveContactResult": ".adaptive",
     "EventAwareScaleAwareAugmentedContactResult": ".scaling",
+    "solve_event_aware_adaptive_contact_path": ".adaptive",
     "solve_event_aware_augmented_contact": ".augmentation",
     "solve_event_aware_coupled_equilibrium": ".newton",
     "solve_event_aware_scale_aware_augmented_contact": ".scaling",
@@ -34,10 +37,13 @@ def __dir__() -> list[str]:
 
 
 __all__ = [
+    "AdaptiveTopologyEventBatch",
+    "EventAwareAdaptiveContactResult",
     "EventAwareAugmentedContactResult",
     "EventAwareCoupledNewtonResult",
     "EventAwareScaleAwareAugmentedContactResult",
     "MultiplierTransportRecord",
+    "solve_event_aware_adaptive_contact_path",
     "solve_event_aware_augmented_contact",
     "solve_event_aware_coupled_equilibrium",
     "solve_event_aware_scale_aware_augmented_contact",
