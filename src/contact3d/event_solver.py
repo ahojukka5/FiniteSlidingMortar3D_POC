@@ -8,10 +8,6 @@ from .event_adaptive import (
 from .event_augmented import solve_event_aware_augmented_contact
 from .event_model import EventAwareAugmentedContactResult, EventAwareCoupledNewtonResult
 from .event_newton import solve_event_aware_coupled_equilibrium
-from .multiplier_transport import (
-    MultiplierTransportRecord,
-    transport_multiplier_states,
-)
 from .restart_diagnostics import (
     RestartAttemptDiagnostic,
     RestartCount,
@@ -23,7 +19,9 @@ from .restart_diagnostics import (
 )
 from .solvers.events import (
     EventAwareScaleAwareAugmentedContactResult,
+    MultiplierTransportRecord,
     solve_event_aware_scale_aware_augmented_contact,
+    transport_multiplier_states,
 )
 
 __all__ = [

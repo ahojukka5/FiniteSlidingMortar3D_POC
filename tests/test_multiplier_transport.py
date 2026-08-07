@@ -11,7 +11,7 @@ from contact3d.event_model import (
     EventAwareAugmentedContactResult,
     EventAwareCoupledNewtonResult,
 )
-from contact3d.multiplier_transport import transport_multiplier_states
+from contact3d.solvers.events import transport_multiplier_states
 from contact3d.topology_model import ContactTopologySignature
 
 

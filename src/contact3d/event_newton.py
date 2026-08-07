@@ -26,7 +26,7 @@ from .event_geometry import (
 from .event_model import EventAwareCoupledNewtonResult
 from .linear_solver import LinearSolveDiagnostics, solve_reduced_system
 from .model import FloatArray
-from .multiplier_transport import (
+from .solvers.events.multiplier_transport import (
     MultiplierTransportRecord,
     transport_multiplier_states,
 )
