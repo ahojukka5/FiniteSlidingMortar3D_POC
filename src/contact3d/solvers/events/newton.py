@@ -10,12 +10,6 @@ from ...coupling import (
     evaluate_coupled_equilibrium,
 )
 from ...equilibrium import NewtonOptions
-from ...event_geometry import (
-    _RECOVERABLE_ERRORS,
-    _event_signatures,
-    _observation,
-    _relative_residual,
-)
 from ...mechanics import BulkGeometryError, FloatArray
 from ...mortar.enforcement import AugmentedLagrangeState
 from ...topology_events import (
@@ -30,6 +24,15 @@ from ..results import (
     CoupledNewtonIteration,
     CoupledTerminationReason,
 )
+from .localization import (
+    RECOVERABLE_CONTACT_EVENT_ERRORS as _RECOVERABLE_ERRORS,
+)
+from .localization import (
+    event_signatures as _event_signatures,
+)
+from .localization import (
+    observe_event_trial as _observation,
+)
 from .multiplier_transport import (
     MultiplierTransportRecord,
     transport_multiplier_states,
@@ -37,6 +40,10 @@ from .multiplier_transport import (
 from .results import EventAwareCoupledNewtonResult
 
 _RESTART_CLEARANCE_WEIGHTS = tuple(2.0**-exponent for exponent in range(24, -1, -1))
+
+
+def _relative_residual(norm: float, initial_norm: float) -> float:
+    return norm / max(initial_norm, np.finfo(float).tiny)
 
 
 def _linear_failure_reason(

@@ -1,49 +1,14 @@
-"""Branch observations for event-localized contact solves."""
+"""Solver-independent contact-topology signature geometry."""
 
 from __future__ import annotations
 
 import numpy as np
 
-from .clipping import ClippingTopologyError
-from .coupled import (
-    ContactInterfaceEvaluation,
-    CoupledEquilibriumEvaluation,
-    CoupledEquilibriumProblem,
-    evaluate_coupled_equilibrium,
-)
-from .enforcement_state import AugmentedLagrangeState
+from .coupling import ContactInterfaceEvaluation, CoupledEquilibriumProblem
 from .geometry import polygon_signed_area
-from .model import FloatArray
+from .mechanics import FloatArray
 from .overlap import build_facet_overlap
-from .pallets import PalletTopologyError
-from .parametric import InverseMapTopologyError
-from .topology_events import ContactTopologySignature, EventKind, TopologyObservation
-
-_RECOVERABLE_ERRORS = (ClippingTopologyError, PalletTopologyError, InverseMapTopologyError)
-
-
-def _validated_states(
-    problem: CoupledEquilibriumProblem,
-    states: tuple[AugmentedLagrangeState, ...] | None,
-) -> tuple[AugmentedLagrangeState, ...]:
-    values = problem.initial_states() if states is None else tuple(states)
-    if len(values) != len(problem.interfaces):
-        raise ValueError("one multiplier state is required for every contact interface")
-    return values
-
-
-def _recoverable_kind(error: BaseException) -> EventKind:
-    if isinstance(error, ClippingTopologyError):
-        return "clipping_vertex_edge"
-    if isinstance(error, PalletTopologyError):
-        return "pallet_transition"
-    if isinstance(error, InverseMapTopologyError):
-        return "inverse_map_boundary"
-    raise TypeError(f"unsupported recoverable contact event: {type(error).__name__}")
-
-
-def _relative_residual(norm: float, initial_norm: float) -> float:
-    return norm / max(initial_norm, np.finfo(float).tiny)
+from .topology_model import ContactTopologySignature
 
 
 def contact_topology_signatures(
@@ -97,44 +62,4 @@ def contact_topology_signatures(
     return tuple(signatures)
 
 
-def _event_signatures(
-    problem: CoupledEquilibriumProblem,
-    evaluation: CoupledEquilibriumEvaluation,
-    *,
-    tolerance: float,
-) -> tuple[ContactTopologySignature, ...]:
-    return contact_topology_signatures(
-        problem,
-        evaluation.displacement,
-        evaluation.contacts,
-        tolerance=tolerance,
-    )
-
-
-def _observation(
-    problem: CoupledEquilibriumProblem,
-    states: tuple[AugmentedLagrangeState, ...],
-    displacement: FloatArray,
-    step: FloatArray,
-    fraction: float,
-    *,
-    load_factor: float,
-    tolerance: float,
-) -> TopologyObservation:
-    try:
-        evaluation = evaluate_coupled_equilibrium(
-            problem,
-            displacement + fraction * step,
-            states,
-            load_factor=load_factor,
-            assemble_tangent=False,
-            tolerance=tolerance,
-        )
-    except _RECOVERABLE_ERRORS as error:
-        return TopologyObservation.recoverable(
-            fraction,
-            _recoverable_kind(error),
-            str(error),
-        )
-    signatures = _event_signatures(problem, evaluation, tolerance=tolerance)
-    return TopologyObservation.valid(fraction, signatures, evaluation)
+__all__ = ["contact_topology_signatures"]
