@@ -1,15 +1,5 @@
 """Adaptive load continuation, scaling, and penalty-control public API."""
 
-from .adaptive_model import (
-    AdaptiveAcceptedStep,
-    AdaptiveContactAttempt,
-    AdaptiveContactResult,
-)
-from .adaptive_options import (
-    AdaptiveContactOptions,
-    AdaptiveLoadOptions,
-    AdaptivePenaltyOptions,
-)
 from .adaptive_solver import (
     contact_penalties,
     solve_adaptive_contact_path,
@@ -24,12 +14,6 @@ from .load_path import (
     with_coupled_boundary_data,
 )
 from .rigid_path import RigidBodyBoundaryPath
-from .scaled_solver import (
-    ScaleAwareAugmentationIteration,
-    ScaleAwareAugmentedContactResult,
-    ScaleAwareNewtonIteration,
-    solve_scale_aware_augmented_contact,
-)
 from .scaling import (
     ContactInterfaceScales,
     ContactScaleIndicators,
@@ -42,6 +26,18 @@ from .scaling import (
     contact_interface_scales,
     coupled_problem_scales,
     propose_interface_penalties,
+)
+from .solvers import (
+    AdaptiveAcceptedStep,
+    AdaptiveContactAttempt,
+    AdaptiveContactOptions,
+    AdaptiveContactResult,
+    AdaptiveLoadOptions,
+    AdaptivePenaltyOptions,
+    ScaleAwareAugmentationIteration,
+    ScaleAwareAugmentedContactResult,
+    ScaleAwareNewtonIteration,
+    solve_scale_aware_augmented_contact,
 )
 from .staged_rigid_path import (
     RigidBodyMotionSegment,
